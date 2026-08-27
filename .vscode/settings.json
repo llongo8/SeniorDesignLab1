@@ -1,0 +1,24 @@
+{
+  // The PC app runs from its own virtualenv, created by SETUP.md step 3.
+  "python.defaultInterpreterPath": "${workspaceFolder}/pc-app/.venv/Scripts/python.exe",
+  "python.analysis.extraPaths": ["${workspaceFolder}/pc-app"],
+
+  // PlatformIO owns the firmware build; stop the C/C++ extension from also
+  // trying to configure it and producing spurious include errors.
+  "C_Cpp.default.configurationProvider": "platformio.platformio-ide",
+
+  "files.exclude": {
+    "**/.pio": true,
+    "**/__pycache__": true
+  },
+
+  "[python]": {
+    "editor.rulers": [100]
+  },
+  "[cpp]": {
+    "editor.rulers": [100]
+  },
+
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true
+}

@@ -1,0 +1,20 @@
+# Normalise line endings so three machines do not fight over them.
+# Text files are stored LF in the repository and checked out natively.
+* text=auto
+
+*.py    text eol=lf
+*.cpp   text eol=lf
+*.h     text eol=lf
+*.ini   text eol=lf
+*.md    text eol=lf
+*.json  text eol=lf
+*.html  text eol=lf
+*.css   text eol=lf
+*.js    text eol=lf
+
+# Never touch binaries.
+*.png   binary
+*.jpg   binary
+*.pdf   binary
+*.bin   binary
+*.elf   binary

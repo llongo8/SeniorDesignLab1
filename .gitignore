@@ -1,0 +1,44 @@
+# ---- Secrets: NEVER commit these ----
+firmware/include/secrets.h
+pc-app/.env
+*.pem
+*.key
+
+# ---- PlatformIO / firmware ----
+.pio/
+.pioenvs/
+.piolibdeps/
+firmware/.pio/
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- Runtime data ----
+pc-app/data/
+*.log
+*.sqlite
+*.db
+
+# ---- Editors / OS ----
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+.idea/
+*.swp
+Thumbs.db
+Desktop.ini
+desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# ---- Office lockfiles (docs get edited in Word/Excel) ----
+~$*

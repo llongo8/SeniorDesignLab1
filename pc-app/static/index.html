@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ECE:4880 Lab 1 Thermometer</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>Thermometer</h1>
+    <div class="header-right">
+      <span id="box-status" class="pill pill-bad">connecting</span>
+      <div class="unit-toggle" role="group" aria-label="Temperature unit">
+        <button id="unit-c" class="unit active" data-unit="C">&deg;C</button>
+        <button id="unit-f" class="unit" data-unit="F">&deg;F</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Requirement 5a: real-time temperature, large font, once a second. -->
+    <section class="readouts" id="readouts">
+      <article class="card" data-sensor="1">
+        <div class="card-head">
+          <h2>Sensor 1</h2>
+          <!-- Requirement 5b: virtually press the button on the third box. -->
+          <button class="vbutton" data-sensor="1" aria-pressed="false">
+            box display <span class="vbutton-state">off</span>
+          </button>
+        </div>
+        <p class="reading" data-role="reading">--</p>
+        <p class="substatus" data-role="substatus">waiting for data</p>
+      </article>
+
+      <article class="card" data-sensor="2">
+        <div class="card-head">
+          <h2>Sensor 2</h2>
+          <button class="vbutton" data-sensor="2" aria-pressed="false">
+            box display <span class="vbutton-state">off</span>
+          </button>
+        </div>
+        <p class="reading" data-role="reading">--</p>
+        <p class="substatus" data-role="substatus">waiting for data</p>
+      </article>
+    </section>
+
+    <!-- Requirement 5c: 300 s chart recorder, fixed scale, scrolling right to left. -->
+    <section class="chart-section">
+      <div class="chart-head">
+        <h2>Last 300 seconds</h2>
+        <div class="legend">
+          <span class="key"><i class="swatch s1"></i>Sensor 1</span>
+          <span class="key"><i class="swatch s2"></i>Sensor 2</span>
+          <span class="key"><i class="swatch missing"></i>no data</span>
+          <span class="key"><i class="swatch offscale"></i>off scale</span>
+        </div>
+      </div>
+      <canvas id="chart" width="1200" height="420"></canvas>
+    </section>
+
+    <!-- Requirement 7: thresholds, destination and both messages, all editable here. -->
+    <section class="alerts-section">
+      <h2>Alerts</h2>
+      <form id="alert-form">
+        <div class="grid">
+          <label class="check">
+            <input type="checkbox" id="alert-enabled"> Send alerts
+          </label>
+
+          <label>Low limit (<span class="unit-label">&deg;C</span>)
+            <input type="number" id="min" step="0.1" required>
+          </label>
+
+          <label>High limit (<span class="unit-label">&deg;C</span>)
+            <input type="number" id="max" step="0.1" required>
+          </label>
+
+          <label>Re-send no sooner than (s)
+            <input type="number" id="cooldown" min="0" step="10" required>
+          </label>
+
+          <label class="wide">Send to (email address, or a carrier SMS gateway address)
+            <input type="text" id="recipient" placeholder="5551234567@vtext.com">
+          </label>
+
+          <label class="wide">Message when too cold
+            <input type="text" id="msg-low">
+          </label>
+
+          <label class="wide">Message when too hot
+            <input type="text" id="msg-high">
+          </label>
+        </div>
+
+        <p class="hint">
+          Placeholders you can use in a message:
+          <code>{sensor}</code> <code>{temp}</code> <code>{limit}</code>
+          <code>{temp_f}</code> <code>{limit_f}</code>
+        </p>
+
+        <div class="actions">
+          <button type="submit" class="primary">Save</button>
+          <button type="button" id="test-alert">Send a test message</button>
+          <span id="alert-feedback" class="feedback"></span>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
