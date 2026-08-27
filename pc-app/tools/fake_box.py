@@ -233,6 +233,26 @@ class Handler(BaseHTTPRequestHandler):
         self._send(404, {"error": "unknown sim endpoint"})
 
 
+class Server(ThreadingHTTPServer):
+    """Threading server that stays quiet when a client hangs up on it.
+
+    We speak HTTP/1.1, so clients keep connections open between requests. When
+    one goes away -- the browser navigates off the page, the PC app restarts,
+    someone closes a tab -- the socket is reset mid-read and the default
+    handler dumps a full traceback to the console. It is harmless; the server
+    keeps running. But it looks exactly like a crash, and a debugging tool that
+    cries wolf is worse than no tool at all.
+
+    Genuine bugs still print normally.
+    """
+
+    def handle_error(self, request, client_address) -> None:
+        exc = sys.exc_info()[1]
+        if isinstance(exc, (ConnectionResetError, ConnectionAbortedError, BrokenPipeError)):
+            return
+        super().handle_error(request, client_address)
+
+
 def main() -> None:
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
     threading.Thread(target=_sampler, daemon=True).start()
@@ -247,7 +267,7 @@ def main() -> None:
                 for k in range(HISTORY_LEN)
             ]
 
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    server = Server(("127.0.0.1", port), Handler)
     print(f"fake third box listening on http://127.0.0.1:{port}")
     print("set BOX_HOST=127.0.0.1 and BOX_PORT=%d in pc-app/.env" % port)
     try:
