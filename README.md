@@ -40,6 +40,7 @@ temperature-threshold alerts.
 2. **[`docs/01-system-design.md`](docs/01-system-design.md)** — architecture, pinout, protocol, timing budgets.
 3. **[`docs/04-team-and-schedule.md`](docs/04-team-and-schedule.md)** — who owns what, and the week-by-week plan.
 4. **[`SETUP.md`](SETUP.md)** — get your machine building and running in ~20 minutes.
+5. **[`docs/06-breadboard-wiring.md`](docs/06-breadboard-wiring.md)** — build the bench prototype, one stage at a time.
 
 ## Quick start (after SETUP.md)
 
