@@ -12,7 +12,7 @@ equipment and supplies stay in the lab unless an instructor says otherwise.
 | 1 | SSD1306 OLED, 128×64, I2C, 0.96" | Check whether yours is address 0x3C or 0x3D. | $5 |
 | 2 | 4.7 kΩ resistor | 1-Wire pull-up, **one per bus** — see the wiring note below. | — |
 | 2 | Momentary panel-mount pushbutton | One per sensor. | $2 ea |
-| 1 | Panel-mount toggle switch, SPST **or SPDT** | Requirement 3. Must break the battery line. Any toggle switch handles our ~250 mA easily. **We have a 3-terminal SPDT** — see [the wiring note](#using-a-3-terminal-spdt-switch). | $3 |
+| 1 | Panel-mount toggle switch, 3 terminal | Requirement 3. Must break the battery line; any toggle handles our ~250 mA easily. **Ours is marked "T004"** and carries the cURus mark (a UL certification stamp, not a brand — do not search for it as a manufacturer). Type not yet confirmed: run [the continuity test](#using-a-3-terminal-spdt-switch) before wiring. | $3 |
 
 ## Connectors and cable (requirement 2b)
 
@@ -82,9 +82,14 @@ resistors. Debounce is 25 ms in firmware.
 
 ### Using a 3-terminal SPDT switch
 
-A 3-terminal toggle is **SPDT**: one pole, two throws. The centre terminal is the *common* (the
-pole), and each outer terminal connects to it in one lever position. Requirement 3 only needs
+A 3-terminal toggle is **usually** SPDT: one pole, two throws. The centre terminal is the *common*
+(the pole), and each outer terminal connects to it in one lever position. Requirement 3 only needs
 on/off, so we use the common and **one** outer terminal, and leave the third unconnected.
+
+Do not take the part marking as authority for this. Ours reads "T004" with a cURus stamp — that
+stamp is a UL certification mark, not a manufacturer, and generic toggles carry inconsistent mould
+markings that map to no reliable datasheet. **The meter is the authority.** It takes a minute and
+it is the only check that cannot be wrong.
 
 ```
    battery +  ────────► [ common / centre ]
@@ -105,6 +110,11 @@ rather than assume:
    outer terminal in the other position. The pin that beeps in *both* positions is the common.
 4. If instead one pair beeps in one position only and never involves a third pin, you have an SPST
    with a spare or illuminated terminal — see the warning below.
+
+Also count the lever detents while you are there. Two positions means **on-on**: the box is powered
+in one and unpowered in the other, which is what we want. Three positions means **on-off-on** with a
+centre off; that also works, and gives an unambiguous middle "off" — but note the box is then
+powered in only *one* of the two end positions, so label the panel accordingly.
 
 **Pick the outer terminal so that "up" means on.** On a standard toggle, the lever points *away*
 from the contact it closes, so the up position usually closes the *lower* terminal. Do not guess:
