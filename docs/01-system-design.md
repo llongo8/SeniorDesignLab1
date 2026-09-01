@@ -107,11 +107,15 @@ With the switch off the box is unpowered, so it cannot display anything and cann
 which is exactly what requirement 3 demands, achieved with a component rather than with code that
 could have a bug in it.
 
-Our switch is a 3-terminal **SPDT**. We use the common terminal and one throw, leaving the other
-throw unconnected, which makes it behave as a plain on/off switch. The spare throw is deliberately
-left idle: there is nothing useful for it to do, because when the switch is off the entire box is
-dead and no circuit inside it can be signalled. See
+Our switch is a 3-terminal **SPDT, on-on**. Battery positive feeds one throw and the load is taken
+from the common, so the remaining throw is left unconnected and is never energised. Wiring it the
+other way round — battery on the common, as an SPST is usually drawn — would leave battery positive
+live on a bare lug inside the enclosure whenever the box is switched off, because an on-on switch
+has no open position. See
 [the wiring note](02-bill-of-materials.md#using-a-3-terminal-spdt-switch).
+
+The spare throw is deliberately idle. There is nothing useful for it to do: when the switch is off
+the entire box is dead, so there is no circuit left inside to signal.
 
 Rough budget for an ESP32 with WiFi modem sleep enabled:
 

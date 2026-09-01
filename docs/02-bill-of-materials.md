@@ -12,7 +12,7 @@ equipment and supplies stay in the lab unless an instructor says otherwise.
 | 1 | SSD1306 OLED, 128×64, I2C, 0.96" | Check whether yours is address 0x3C or 0x3D. | $5 |
 | 2 | 4.7 kΩ resistor | 1-Wire pull-up, **one per bus** — see the wiring note below. | — |
 | 2 | Momentary panel-mount pushbutton | One per sensor. | $2 ea |
-| 1 | Panel-mount toggle switch, 3 terminal | Requirement 3. Must break the battery line; any toggle handles our ~250 mA easily. **Ours is marked "T004"** and carries the cURus mark (a UL certification stamp, not a brand — do not search for it as a manufacturer). Type not yet confirmed: run [the continuity test](#using-a-3-terminal-spdt-switch) before wiring. | $3 |
+| 1 | Toggle switch, 3 terminal SPDT, on-on | Requirement 3. Breaks the battery line; any toggle handles our ~250 mA easily. **Ours is marked "T004"** with a cURus stamp (a UL certification mark, not a brand — there is no datasheet to find under it). Confirmed 2-position on-on. [Wiring note](#using-a-3-terminal-spdt-switch) — the battery feeds a throw, not the common. | $3 |
 
 ## Connectors and cable (requirement 2b)
 
@@ -91,15 +91,26 @@ stamp is a UL certification mark, not a manufacturer, and generic toggles carry 
 markings that map to no reliable datasheet. **The meter is the authority.** It takes a minute and
 it is the only check that cannot be wrong.
 
+Ours is a 2-position **on-on**, confirmed by the detent count. Wire it like this:
+
 ```
-   battery +  ────────► [ common / centre ]
-                          │        │
-              lever up ───┘        └─── lever down
-                   ▲                        ▲
-              terminal A                terminal B
-                   │
-                   └──────────► to the 5 V boost input   (terminal B unused)
+   battery + ──────────►  [ terminal A ]
+                                 │   closed when the lever selects A  ->  ON
+                          [ common / centre ] ────────►  5 V boost input
+                                 │   closed when the lever selects B  ->  OFF
+                                 X  [ terminal B ]  left unconnected
 ```
+
+**Feed the battery into a throw, and take the load off the common — not the other way round.**
+
+It is tempting to put battery + on the common, since that is how an SPST is drawn. Do not. On an
+on-on switch there is no open position: the common is always connected to *something*. With
+battery + on the common, the off position energises terminal B, leaving battery positive sitting on
+a bare unconnected lug inside the enclosure whenever the box is switched off — a short waiting to
+find the cell holder, the boost module or a stray strand.
+
+Feeding a throw instead means terminal B is only ever connected to the (now isolated) load side, so
+it is never live. Insulate or trim it anyway; free solder lugs move around during a drop test.
 
 **Identify the common pin before soldering.** It is almost always the centre one, but confirm it
 rather than assume:
@@ -111,10 +122,9 @@ rather than assume:
 4. If instead one pair beeps in one position only and never involves a third pin, you have an SPST
    with a spare or illuminated terminal — see the warning below.
 
-Also count the lever detents while you are there. Two positions means **on-on**: the box is powered
-in one and unpowered in the other, which is what we want. Three positions means **on-off-on** with a
-centre off; that also works, and gives an unambiguous middle "off" — but note the box is then
-powered in only *one* of the two end positions, so label the panel accordingly.
+**Ours is on-on** (two detents), so the box is powered in one position and unpowered in the other.
+That is exactly what requirement 3 needs. The only thing still to determine at the bench is which
+pin is the common and which throw gives lever-up = on.
 
 **Pick the outer terminal so that "up" means on.** On a standard toggle, the lever points *away*
 from the contact it closes, so the up position usually closes the *lower* terminal. Do not guess:
