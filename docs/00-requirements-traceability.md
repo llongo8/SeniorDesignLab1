@@ -34,7 +34,7 @@ Status key: **DONE** verified · **SW** software complete, needs hardware to ver
 
 | # | Requirement | How we satisfy it | Where | Verified by | Status |
 |---|---|---|---|---|---|
-| 3 | Switch off: no display, and no temperature data available from the internet | Switch is a hard SPST break in the battery line, so the whole box is unpowered. Nothing can serve data because nothing is running. The PC then shows "no data available". | [Design §5](01-system-design.md) | T-3 | SW |
+| 3 | Switch off: no display, and no temperature data available from the internet | A hard mechanical break in the battery line, so the whole box is unpowered. Nothing can serve data because nothing is running. The PC then shows "no data available". Implemented with a 3-terminal SPDT wired as on/off (common + one throw). | [Design §5](01-system-design.md) | T-3 | SW |
 
 ## 4. Local features at the third box
 

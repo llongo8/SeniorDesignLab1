@@ -29,6 +29,7 @@ phantom gaps in the graph. Current status: **18 passed, 0 failed**.
 | ID | Requirement | Procedure | Pass criterion | Result |
 |---|---|---|---|---|
 | T-3 | 3 | Switch the box off. Observe the display and the PC UI. | Display dark. PC shows "no data available" within 10 s. | |
+| T-3b | 3 | Check the switch sense: lever **up** should be on. | Up = powered, down = dark. A backwards switch is an avoidable mark to lose. | |
 | T-4a | 4a | Scope: one probe on the button pin, one on the OLED SCL line. Press the button and measure from the button edge to the start of the I2C burst that follows. Cross-check with `max_button_latency_us` from `GET /api/info`. | **< 20 ms**, worst of 20 presses. | |
 | T-4b | 4b | View the display under normal room lighting from 1 m, at eye level and at 45°. | All digits legible. | |
 | T-4c | 4c | Exercise all four button combinations: off/off, on/off, off/on, on/on. | Correct value or "Sensor n off" in every case. | |

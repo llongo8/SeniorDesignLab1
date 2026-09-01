@@ -12,7 +12,7 @@ equipment and supplies stay in the lab unless an instructor says otherwise.
 | 1 | SSD1306 OLED, 128×64, I2C, 0.96" | Check whether yours is address 0x3C or 0x3D. | $5 |
 | 2 | 4.7 kΩ resistor | 1-Wire pull-up, **one per bus** — see the wiring note below. | — |
 | 2 | Momentary panel-mount pushbutton | One per sensor. | $2 ea |
-| 1 | SPST panel-mount toggle switch | Requirement 3. Must break the battery line, rated for the pack current. | $3 |
+| 1 | Panel-mount toggle switch, SPST **or SPDT** | Requirement 3. Must break the battery line. Any toggle switch handles our ~250 mA easily. **We have a 3-terminal SPDT** — see [the wiring note](#using-a-3-terminal-spdt-switch). | $3 |
 
 ## Connectors and cable (requirement 2b)
 
@@ -79,6 +79,44 @@ input-only with no internal pull-ups, so they cannot serve as our buttons.
 
 Wired to ground and using the internal pull-ups (`INPUT_PULLUP`), so pressed reads LOW. No external
 resistors. Debounce is 25 ms in firmware.
+
+### Using a 3-terminal SPDT switch
+
+A 3-terminal toggle is **SPDT**: one pole, two throws. The centre terminal is the *common* (the
+pole), and each outer terminal connects to it in one lever position. Requirement 3 only needs
+on/off, so we use the common and **one** outer terminal, and leave the third unconnected.
+
+```
+   battery +  ────────► [ common / centre ]
+                          │        │
+              lever up ───┘        └─── lever down
+                   ▲                        ▲
+              terminal A                terminal B
+                   │
+                   └──────────► to the 5 V boost input   (terminal B unused)
+```
+
+**Identify the common pin before soldering.** It is almost always the centre one, but confirm it
+rather than assume:
+
+1. Multimeter to continuity (the beeping mode).
+2. Probe centre against one outer terminal. Flip the lever back and forth.
+3. The centre pin beeps against **one** outer terminal in one position and against **the other**
+   outer terminal in the other position. The pin that beeps in *both* positions is the common.
+4. If instead one pair beeps in one position only and never involves a third pin, you have an SPST
+   with a spare or illuminated terminal — see the warning below.
+
+**Pick the outer terminal so that "up" means on.** On a standard toggle, the lever points *away*
+from the contact it closes, so the up position usually closes the *lower* terminal. Do not guess:
+put the meter on it, choose the terminal that conducts with the lever up, and wire that one. A
+demo where the switch reads backwards is an avoidable way to lose marks on a requirement that is
+otherwise free.
+
+> **Careful: not every 3-terminal switch is SPDT.** Illuminated rocker switches also have three
+> terminals — line, load, and a lamp ground — and wiring one as if it were SPDT either shorts the
+> supply or leaves the lamp permanently lit. If the switch has a window, a coloured lens or an
+> internal LED, look up its part number before wiring it. The continuity test above distinguishes
+> them: a true SPDT has one pin common to both lever positions, an illuminated SPST does not.
 
 ### Keep the I2C run short
 
