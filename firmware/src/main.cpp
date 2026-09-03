@@ -179,6 +179,22 @@ static void pushHistory()
     if (histFilled < HISTORY_LEN) histFilled++;
 }
 
+// One line per sample on the serial port. During bench bring-up this is the
+// only window into the box: no display wired, and WiFi possibly not configured.
+static void reportSerial()
+{
+#if SERIAL_TELEMETRY
+    Serial.print(F("[temp]"));
+    for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
+        Serial.printf("  S%u ", i + 1);
+        if (sensor[i].present) Serial.printf("%6.2f C", sensor[i].tempC);
+        else                   Serial.print(F("  --.-- ?"));
+        Serial.print(sensor[i].displayOn ? F(" [on] ") : F(" [off]"));
+    }
+    Serial.println();
+#endif
+}
+
 static void pollSensors()
 {
     const uint32_t now = millis();
@@ -212,6 +228,7 @@ static void pollSensors()
             }
             pushHistory();
             renderDisplay();
+            reportSerial();
             sampleState = SAMPLE_IDLE;
         }
         break;

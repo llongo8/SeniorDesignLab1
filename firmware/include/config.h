@@ -90,6 +90,15 @@
 #define DEBOUNCE_MS            25
 
 // -----------------------------------------------------------------------------
+// Diagnostics
+// -----------------------------------------------------------------------------
+// Print one temperature line per sample on the serial port. Essential during
+// bench bring-up, when the display is not wired yet and WiFi may not be
+// configured either -- it is then the only way to see whether the probes are
+// actually reading. Set to 0 once the box is assembled and the log is noise.
+#define SERIAL_TELEMETRY       1
+
+// -----------------------------------------------------------------------------
 // Network
 // -----------------------------------------------------------------------------
 #define HTTP_PORT              80
