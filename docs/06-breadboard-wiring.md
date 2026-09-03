@@ -12,9 +12,12 @@ wiring the whole thing and then trying to work out which of five subsystems is b
 
 ## Before you start
 
-**Everything runs at 3.3 V.** The ESP32 GPIO pins are 3.3 V and are **not** 5 V tolerant. Both the
-DS18B20s and the LCD are powered from the **3V3** pin, never from VIN or 5V. Getting this wrong
-can damage the ESP32, and it is the single most common way this board gets killed.
+**All logic runs at 3.3 V.** The ESP32 GPIO pins are 3.3 V and are **not** 5 V tolerant. The
+DS18B20s and the LCD controller are powered from the **3V3** pin, never from VIN or 5V. Getting
+this wrong can damage the ESP32, and it is the single most common way this board gets killed.
+
+The one exception is the LCD backlight, which is an isolated LED across pins 15 and 16 and touches
+no GPIO. On our blue module it needs 5 V -- see [below](#a-blue-lcd-needs-5-v-for-its-backlight).
 
 **The DevKit is wide.** It spans the centre channel of the breadboard and typically leaves only one
 or two free tie points per pin. Use a full-size (830 point) board, and seat the module so its pins
@@ -80,10 +83,10 @@ and only **one of its two headers can be reached at all**. These six are the pin
 same header as the sensors, buttons, 3V3 and GND. The tidy-looking choice (13, 14, 25, 26, 27, 33)
 is on the far header and makes the prototype physically impossible to wire on one board.
 
-`VIN` is on that unreachable header too, which is why the LCD runs from 3V3 here rather than 5 V.
-Getting both headers back needs a second breadboard butted against the first with the module
-straddling the join, or female-to-male jumpers with the module sitting beside the board. Worth
-solving before the final build.
+`VIN` is on that unreachable header too, so the 5 V our backlight needs has to come from somewhere
+else for now -- see the blue-backlight section below. Getting both headers back needs a second
+breadboard butted against the first with the module straddling the join, or female-to-male jumpers
+with the module sitting beside the board. Worth solving before the final build.
 
 ### Finding the wiper
 
