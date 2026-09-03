@@ -265,7 +265,20 @@ static void pollButtons()
                 sensor[i].displayOn = !sensor[i].displayOn;
                 renderDisplay();
                 const uint32_t dt = micros() - t0;
-                if (dt > maxButtonLatencyUs) maxButtonLatencyUs = dt;
+
+                if (dt > maxButtonLatencyUs) {
+                    maxButtonLatencyUs = dt;
+#if SERIAL_TELEMETRY
+                    // Printed only when the worst case gets worse: quiet in
+                    // normal use, and it puts the Requirement 4a evidence on
+                    // the serial port so it can be measured before the network
+                    // is up. The print happens after dt is taken, so it cannot
+                    // inflate the number it is reporting.
+                    Serial.printf("[perf] worst button-to-display latency now "
+                                  "%lu us (budget 20000, render %lu us)\n",
+                                  (unsigned long)dt, (unsigned long)maxRenderUs);
+#endif
+                }
             }
         }
     }
