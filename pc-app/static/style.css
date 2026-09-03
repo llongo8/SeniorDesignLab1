@@ -200,7 +200,10 @@ label { display: flex; flex-direction: column; gap: .35rem; font-size: .85rem; c
    long, and forcing it onto one line overflows the panel on a narrow window. */
 .field-text { display: block; }
 
-input[type="text"], input[type="number"] {
+/* Every input except the checkbox, rather than an explicit list of types: a
+   `type="tel"` field added later rendered unstyled white-on-black because it
+   was not in the list, and the next new type would do the same. */
+input:not([type="checkbox"]) {
   background: var(--bg);
   border: 1px solid var(--line);
   color: var(--text);
@@ -236,3 +239,23 @@ input:focus { outline: 2px solid var(--s1); outline-offset: 1px; border-color: t
 .feedback { font-size: .85rem; margin: .9rem 0 0; min-height: 1.2em; line-height: 1.5; word-break: break-word; }
 .feedback.ok  { color: var(--ok); }
 .feedback.bad { color: var(--bad); }
+
+.dest-sms { margin-top: 1rem; }
+
+select {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  padding: .55rem .7rem;
+  font: inherit;
+  font-size: .95rem;
+  width: 100%;
+}
+select:focus { outline: 2px solid var(--s1); outline-offset: 1px; border-color: transparent; }
+
+/* Shows the gateway address the number and carrier resolve to. Without it the
+   translation is invisible and an unsent text looks like a bug in the app. */
+#sms-preview { margin-top: .7rem; }
+#sms-preview code { color: var(--ok); }
+#sms-preview.incomplete code { color: var(--warn); }

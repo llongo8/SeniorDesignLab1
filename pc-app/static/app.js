@@ -333,18 +333,101 @@ function say(message, ok = true) {
   if (message && ok) setTimeout(() => { feedback.textContent = ''; }, 6000);
 }
 
+// The carrier list comes from the server: a phone number alone cannot identify
+// a carrier, and the gateway table should have exactly one home.
+//
+// Deduplicated by holding the promise rather than setting a flag afterwards.
+// loadSettings() is called twice during startup, and a flag set after the await
+// lets both calls through — which appended the whole list twice.
+let carriersPromise = null;
+
+function loadCarriers() {
+  const select = document.getElementById('sms-carrier');
+  if (!select) return Promise.resolve();
+  if (!carriersPromise) {
+    carriersPromise = fetch('/api/carriers')
+      .then((r) => r.json())
+      .then((list) => {
+        for (const c of list) {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.label;
+          select.appendChild(opt);
+        }
+      })
+      .catch((err) => { console.error('could not load carriers', err); });
+  }
+  return carriersPromise;
+}
+
+// Show the address the number and carrier resolve to. Without this the
+// translation is invisible, and a text that never arrives looks like an app bug
+// rather than a missing carrier.
+function renderSmsPreview(address) {
+  const el = document.getElementById('sms-preview');
+  if (!el) return;
+  const number = document.getElementById('sms-number').value.trim();
+  const carrier = document.getElementById('sms-carrier').value;
+
+  if (address) {
+    el.innerHTML = `Texts will be sent to <code>${address}</code>`;
+    el.className = 'hint';
+  } else if (!number && !carrier) {
+    el.textContent = 'Leave blank to send email only.';
+    el.className = 'hint';
+  } else if (!carrier) {
+    el.innerHTML = 'Pick a carrier — a phone number alone does not say where to send.';
+    el.className = 'hint incomplete';
+  } else {
+    el.innerHTML = 'Enter a 10-digit phone number.';
+    el.className = 'hint incomplete';
+  }
+}
+
 async function loadSettings() {
   try {
+    await loadCarriers();
     const cfg = await (await fetch('/api/settings')).json();
     document.getElementById('alert-enabled').checked = cfg.enabled;
     document.getElementById('min').value = toDisplay(cfg.min_c).toFixed(1);
     document.getElementById('max').value = toDisplay(cfg.max_c).toFixed(1);
     document.getElementById('cooldown').value = cfg.cooldown_s;
-    document.getElementById('recipient').value = cfg.recipient;
+    document.getElementById('email-to').value = cfg.email_to || '';
+    document.getElementById('sms-number').value = cfg.sms_number || '';
+    document.getElementById('sms-carrier').value = cfg.sms_carrier || '';
     document.getElementById('msg-low').value = cfg.message_low;
     document.getElementById('msg-high').value = cfg.message_high;
+    renderSmsPreview(cfg.sms_address);
   } catch (err) {
     console.error('could not load settings', err);
+  }
+}
+
+// Re-render the preview as the user types, but ask the server for the address
+// so the formatting rules live in one place rather than being reimplemented here.
+let previewTimer = null;
+for (const id of ['sms-number', 'sms-carrier']) {
+  document.getElementById(id).addEventListener('input', () => {
+    renderSmsPreview('');
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(refreshSmsPreview, 350);
+  });
+}
+
+async function refreshSmsPreview() {
+  const number = document.getElementById('sms-number').value.trim();
+  const carrier = document.getElementById('sms-carrier').value;
+  if (!number || !carrier) { renderSmsPreview(''); return; }
+  try {
+    const res = await fetch('/api/settings/preview-sms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sms_number: number, sms_carrier: carrier }),
+    });
+    const body = await res.json();
+    renderSmsPreview(body.sms_address);
+  } catch {
+    renderSmsPreview('');
   }
 }
 
@@ -355,7 +438,9 @@ form.addEventListener('submit', async (event) => {
     min_c: toCelsius(parseFloat(document.getElementById('min').value)),
     max_c: toCelsius(parseFloat(document.getElementById('max').value)),
     cooldown_s: parseInt(document.getElementById('cooldown').value, 10),
-    recipient: document.getElementById('recipient').value.trim(),
+    email_to: document.getElementById('email-to').value.trim(),
+    sms_number: document.getElementById('sms-number').value.trim(),
+    sms_carrier: document.getElementById('sms-carrier').value,
     message_low: document.getElementById('msg-low').value,
     message_high: document.getElementById('msg-high').value,
   };
@@ -366,6 +451,8 @@ form.addEventListener('submit', async (event) => {
       body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+    const saved = await res.json();
+    renderSmsPreview(saved.sms_address);
     say('Saved.');
   } catch (err) {
     say(`Could not save: ${err.message}`, false);
@@ -375,13 +462,19 @@ form.addEventListener('submit', async (event) => {
 document.getElementById('test-alert').addEventListener('click', async () => {
   say('Sending...');
   try {
-    const res = await fetch('/api/alerts/test', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ recipient: document.getElementById('recipient').value.trim() }),
-    });
-    if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
-    say('Test message sent.');
+    // Sends to whatever is saved, so hitting Test without saving first tells
+    // you about the stored settings rather than the ones on screen.
+    const res = await fetch('/api/alerts/test', { method: 'POST' });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.detail || res.statusText);
+
+    // Report each destination separately: a working email and a dead carrier
+    // gateway is a partial success, and calling it a failure would be wrong.
+    if (body.failed && body.failed.length) {
+      say(`Sent to ${body.delivered.join(', ') || 'nobody'}. Failed: ${body.error}`, false);
+    } else {
+      say(`Test message sent to ${body.delivered.join(' and ')}.`);
+    }
   } catch (err) {
     say(`Could not send: ${err.message}`, false);
   }

@@ -7,7 +7,7 @@ import logging
 import smtplib
 import time
 from email.message import EmailMessage
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from .config import settings
 from .settings_store import AlertSettings
@@ -68,7 +68,8 @@ class AlertEngine:
 
         if current == ZONE_OK or current == previous:
             return
-        if not cfg.enabled or not cfg.recipient:
+        destinations = cfg.destinations()
+        if not cfg.enabled or not destinations:
             return
 
         now = time.time()
@@ -87,22 +88,34 @@ class AlertEngine:
         )
 
         self._last_sent[sensor_id] = now
-        await self.send(cfg.recipient, "Thermometer alert", body)
+        await self.send(destinations, "Thermometer alert", body)
 
-    async def send(self, recipient: str, subject: str, body: str) -> None:
-        """Send one message. Runs the blocking smtplib call off the event loop."""
+    async def send(self, recipients: List[str], subject: str, body: str) -> List[str]:
+        """Send to every destination, returning the ones that failed.
+
+        Each address is attempted independently: a phone whose carrier gateway
+        has stopped accepting mail must not stop the email going out, and vice
+        versa. A partial failure is reported but is not treated as a total one.
+        """
         if not settings.smtp_configured:
             self.last_error = "SMTP is not configured -- fill in SMTP_* in pc-app/.env"
             log.warning(self.last_error)
-            return
-        try:
-            await asyncio.to_thread(self._send_blocking, recipient, subject, body)
-            self.sent_count += 1
-            self.last_error = None
-            log.info("alert sent to %s: %s", recipient, body)
-        except Exception as exc:  # noqa: BLE001 -- surfaced to the UI, never fatal
-            self.last_error = f"{type(exc).__name__}: {exc}"
-            log.error("alert send failed: %s", self.last_error)
+            return list(recipients)
+
+        failures: List[str] = []
+        errors: List[str] = []
+        for recipient in recipients:
+            try:
+                await asyncio.to_thread(self._send_blocking, recipient, subject, body)
+                self.sent_count += 1
+                log.info("alert sent to %s: %s", recipient, body)
+            except Exception as exc:  # noqa: BLE001 -- surfaced to the UI, never fatal
+                failures.append(recipient)
+                errors.append(f"{recipient}: {type(exc).__name__}: {exc}")
+                log.error("alert send to %s failed: %s", recipient, exc)
+
+        self.last_error = "; ".join(errors) if errors else None
+        return failures
 
     @staticmethod
     def _send_blocking(recipient: str, subject: str, body: str) -> None:

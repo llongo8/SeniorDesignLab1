@@ -16,7 +16,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
 
 from . import settings_store
 from .alerts import AlertEngine
@@ -125,22 +124,47 @@ async def put_settings(value: settings_store.AlertSettings) -> settings_store.Al
     return value
 
 
-class TestAlert(BaseModel):
-    recipient: str = ""
+@app.get("/api/carriers")
+async def carriers() -> list[dict]:
+    """The carrier dropdown. Served from the server so the gateway table has one
+    home -- a phone number alone cannot identify a carrier, so the user picks."""
+    return settings_store.carrier_choices()
+
+
+@app.post("/api/settings/preview-sms")
+async def preview_sms(body: dict) -> dict:
+    """Resolve a number and carrier to a gateway address without saving.
+
+    The UI could build this string itself, but then the normalisation rules --
+    stripping punctuation, tolerating a leading country code, the gateway table
+    -- would exist in two places and drift apart.
+    """
+    probe = settings_store.AlertSettings(
+        sms_number=str(body.get("sms_number", "")),
+        sms_carrier=str(body.get("sms_carrier", "")),
+    )
+    return {"sms_address": probe.sms_address}
 
 
 @app.post("/api/alerts/test")
-async def test_alert(body: TestAlert) -> dict:
-    """Send one message now, so the team can prove delivery works before the demo."""
+async def test_alert() -> dict:
+    """Send to every configured destination, so the team can prove delivery
+    works before the demo rather than during it."""
     cfg = settings_store.load()
-    recipient = body.recipient or cfg.recipient
-    if not recipient:
-        raise HTTPException(status_code=400, detail="no recipient configured")
-    await alerts.send(
-        recipient,
+    destinations = cfg.destinations()
+    if not destinations:
+        raise HTTPException(
+            status_code=400,
+            detail="No destination set. Add an email address, or a phone number and its carrier.",
+        )
+
+    failures = await alerts.send(
+        destinations,
         "Thermometer test",
         "Test message from the ECE:4880 Lab 1 thermometer. If you can read this, alerting works.",
     )
-    if alerts.last_error:
-        raise HTTPException(status_code=502, detail=alerts.last_error)
-    return {"sent": True, "recipient": recipient}
+    delivered = [d for d in destinations if d not in failures]
+
+    if failures and not delivered:
+        raise HTTPException(status_code=502, detail=alerts.last_error or "all destinations failed")
+    return {"delivered": delivered, "failed": failures, "error": alerts.last_error}
