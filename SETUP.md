@@ -180,6 +180,29 @@ See [the wiring guide](docs/06-breadboard-wiring.md) for the full reasoning.
 one per bus. Without it the bus never reads anything. Check the probe wiring too: red 3V3, black
 GND, yellow or white DATA.
 
+### Alerts fail with `535 5.7.8 Username and Password not accepted`
+
+Google rejected the login. Check the shape of the password first: an app password is **16 lowercase
+letters**, no digits or symbols. Google shows it as four groups of four, but the spaces are
+presentational and the app strips them for you.
+
+If the shape is right, the credential itself is being refused. In order of likelihood:
+
+1. **The app password belongs to a different Google account.** `myaccount.google.com/apppasswords`
+   generates for whichever account is active, which is easy to get wrong when signed into several.
+   Sign in as only that account in an incognito window and confirm the password is listed.
+2. **The account is too new.** Google blocks SMTP and app passwords on freshly created accounts
+   until they look established, often for a day or more. No configuration change fixes this.
+3. **2-Step Verification was turned off**, which silently revokes every app password.
+
+To tell them apart, try an established personal Gmail with its own freshly generated app password.
+If that sends, the problem is the new account rather than anything in the repository.
+
+If Gmail keeps refusing, any SMTP provider works — only the four `SMTP_*` values change. Brevo and
+SendGrid both have free tiers intended for exactly this and issue credentials that work
+immediately. Do not bother with a `uiowa.edu` address: Iowa runs Microsoft 365, which has basic
+SMTP authentication disabled.
+
 ### The PC app says "no data available"
 
 - Can you reach the box directly? Open `http://<box-ip>/api/state` in a browser.
