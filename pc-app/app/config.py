@@ -7,6 +7,7 @@ the app runs on: where the box is, and how to reach the mail server.
 
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PACKAGE_DIR = Path(__file__).resolve().parent
@@ -34,6 +35,15 @@ class Settings(BaseSettings):
     smtp_user: str = ""
     smtp_password: str = ""
     alert_from: str = ""
+
+    @field_validator("smtp_password")
+    @classmethod
+    def _strip_spaces(cls, value: str) -> str:
+        """Google displays app passwords as four groups of four, so that is how
+        everybody pastes them. The spaces are presentational and the server does
+        not want them. Strip them here rather than expecting each teammate to
+        know, because the resulting failure is an opaque authentication error."""
+        return value.replace(" ", "")
 
     @property
     def box_base_url(self) -> str:

@@ -171,3 +171,12 @@ input:focus { outline: 2px solid var(--s1); outline-offset: 1px; border-color: t
 .feedback { font-size: .85rem; }
 .feedback.ok  { color: var(--ok); }
 .feedback.bad { color: var(--bad); }
+
+/* A <label> is a flex column, so every child becomes its own row. The two
+   threshold labels embed a <span> for the unit, which split "Low limit (",
+   "°F" and ")" onto three separate lines. Wrapping the whole caption in one
+   span makes it a single flex item again. */
+.field-text {
+  display: block;
+  white-space: nowrap;
+}
