@@ -16,7 +16,7 @@ temperature-threshold alerts.
    │ DS18B20 #1   ├──────────►│                     │  (HTTP)   │  PC / laptop │
    │ 1 m probe    │           │   THIRD BOX         │◄─────────►│  FastAPI +   │
    └──────────────┘           │   ESP32             │           │  browser UI  │
-                              │   OLED display      │           └──────┬───────┘
+                              │   16x2 LCD display  │           └──────┬───────┘
    ┌──────────────┐  1-Wire   │   2 buttons         │                  │ SMTP
    │ DS18B20 #2   ├──────────►│   power switch      │                  ▼
    │ 1 m probe    │           │   battery           │           ┌──────────────┐
@@ -47,11 +47,13 @@ temperature-threshold alerts.
 Run the PC app against the simulator — no hardware needed, works for all three of us in parallel:
 
 ```bash
-cd pc-app && python tools/fake_box.py
+cd pc-app
+python tools/fake_box.py
 ```
 
 ```bash
-cd pc-app && uvicorn app.main:app --reload --port 8000
+cd pc-app
+uvicorn app.main:app --reload --port 8000
 ```
 
 Then open <http://localhost:8000>.
@@ -59,7 +61,7 @@ Then open <http://localhost:8000>.
 Build and flash the third box:
 
 ```bash
-cd firmware && pio run --target upload && pio device monitor
+python -m platformio run -d firmware --target upload
 ```
 
 ## Repository layout

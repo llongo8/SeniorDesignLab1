@@ -9,8 +9,9 @@
                                │   │                              │
    Button 1 ────────(GPIO18)───┤   │  1 Hz sampler (non-blocking) │
    Button 2 ────────(GPIO19)───┤   │  300-entry ring buffer       │
-                               │   │  SSD1306 renderer            │
-   OLED ──────I2C(GPIO21/22)───┘   │  HTTP JSON server :80        │
+                               │   │  LCD1602 renderer            │
+   LCD ─── 4-bit parallel ─────┘   │  HTTP JSON server :80        │
+        (23,22,21,17,16,15)        │                              │
                                    └──────────────┬───────────────┘
    Battery ──[SPST panel switch]──► 5 V boost ────┘        │ WiFi
                                                            │
@@ -74,17 +75,18 @@ marker — never discarded.
 | 5c first graph after PC start | 10 s | Ring buffer downloaded on the first poll | ~1 s |
 | 6 recovery after box switched on | 10 s | Reconnect detected within one poll, then backfill | 1.2 s |
 
-### The 20 ms trap
+### The 20 ms budget
 
-An SSD1306 frame is 1024 bytes. Over I2C each byte costs about 9 bit-times:
+A full refresh is 32 characters over a 4-bit parallel bus. The HD44780 needs about 37 us of
+execution time per character, which predicts roughly 1.2 ms — but the measured figure is **7.3 ms**,
+because the library also toggles six GPIO and strobes the enable line for every nibble, and that
+overhead dominates the controller's own execution time by about six to one.
 
-```
-400 kHz → 1024 × 9 / 400 000 = 23.0 ms   ← exceeds the 20 ms budget on its own
-800 kHz → 1024 × 9 / 800 000 = 11.5 ms   ← what we run
-```
+That is the number to quote. The prediction was optimistic by a factor of six and would have been
+a poor thing to have written in a report unchallenged; the firmware measures the real worst case at
+runtime and prints it on the serial port whenever it gets worse.
 
-Running the default 400 kHz would have failed requirement 4a with no other mistake anywhere in the
-system. Two further precautions:
+7.3 ms against a 20 ms budget leaves 2.7x margin. Two further precautions protect it:
 
 - The sensor conversion never blocks. `setWaitForConversion(false)` means the 375 ms conversion
   overlaps normal loop execution instead of stalling it.
@@ -122,7 +124,7 @@ Rough budget for an ESP32 with WiFi modem sleep enabled:
 | State | Current |
 |---|---|
 | Active, WiFi associated, modem sleep on | ~80–120 mA average |
-| OLED at typical duty | ~10–20 mA |
+| LCD1602 with backlight | ~25–40 mA |
 | Budget | ~150 mA average |
 
 A single protected 18650 (3000 mAh) through a 5 V boost gives roughly **12–15 hours**, which is far
@@ -189,8 +191,8 @@ these in the report rather than the calculated figures.
 
 ## 8. Network
 
-The box joins a WiFi network as a station and prints its IP on the OLED and the serial port at
-boot. The PC finds it by IP, set in `pc-app/.env`.
+The box joins a WiFi network as a station and prints its IP on the serial port at boot. The LCD
+does not show it: both of its rows are spoken for by requirement 4, one per sensor. The PC finds it by IP, set in `pc-app/.env`.
 
 **Use a phone hotspot or a personal travel router, not campus WiFi.** eduroam is WPA2-Enterprise,
 which needs a different and much fussier connection routine, and client isolation on many campus

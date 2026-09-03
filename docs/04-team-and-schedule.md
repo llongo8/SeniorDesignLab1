@@ -37,7 +37,7 @@ Documentation is not a fourth track. Everyone writes the parts they own, in the 
 | Week | Dates | Milestone | Firmware | PC app | Mechanical |
 |---|---|---|---|---|---|
 | 1 | Aug 27 – Aug 30 | **Repo and toolchain live.** Everyone can build and run. | Flash the ESP32, confirm boot, blink | Run the app against the simulator | **Order parts today** — probes, connectors, enclosure, cell |
-| 2 | Aug 31 – Sep 6 | **Breadboard prototype reads temperature.** | Both DS18B20s reading; OLED showing values; buttons toggling | Point the app at the real box; end-to-end 1 Hz data | Mock up the panel layout; confirm the box fits everything |
+| 2 | Aug 31 – Sep 6 | **Breadboard prototype reads temperature.** | Both DS18B20s reading; LCD showing values; buttons toggling | Point the app at the real box; end-to-end 1 Hz data | Mock up the panel layout; confirm the box fits everything |
 | 3 | Sep 7 – Sep 13 | **TA progress update.** Bring the open-questions list. | Ring buffer + `/api/history`; hot-plug recovery | Chart, C/F, virtual buttons all verified on hardware | Drill and mount the panel; connectors terminated |
 | 4 | Sep 14 – Sep 20 | **Lab checkoff.** Full manual test pass. | Timing measurements captured from `/api/info` | Alerts delivering to a real phone | Final assembly, soldered, fastened; **drop test** |
 | 5 | Sep 21 – Sep 27 | **Report and submission.** | Freeze; fix only what checkoff found | Freeze | Photographs for the report |
@@ -69,5 +69,5 @@ Documentation is not a fourth track. Everyone writes the parts they own, in the 
 
 The handout asks specifically for rapid prototyping: get something working end to end early, then
 add features and rework until it meets every requirement. Resist the urge to perfect the firmware
-before the box exists. A prototype that reads one sensor onto a breadboarded OLED in week 2 is
+before the box exists. A prototype that reads one sensor onto a breadboarded LCD in week 2 is
 worth more than a beautiful architecture in week 4.

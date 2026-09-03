@@ -211,7 +211,7 @@ from each side. If the button reads as permanently pressed, you have wired an al
 Wire the rails, then the display only. Flash and open the monitor:
 
 ```bash
-cd firmware && pio run --target upload && pio device monitor
+python -m platformio run -d firmware --target upload
 ```
 
 **Expect:** the LCD shows `ECE:4880 Lab 1 / Third box boot..`, then the sensor rows. The serial

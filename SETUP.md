@@ -35,7 +35,8 @@ takes a few minutes on first launch; let it finish before opening a terminal.
 ## 3. PC application
 
 ```bash
-cd pc-app && python -m venv .venv
+cd pc-app
+python -m venv .venv
 ```
 
 Activate it — PowerShell:
@@ -69,13 +70,15 @@ Leave `BOX_HOST` pointing at the simulator for now (`127.0.0.1`, port `8080`).
 Two terminals. First the simulated box:
 
 ```bash
-cd pc-app && python tools/fake_box.py
+cd pc-app
+python tools/fake_box.py
 ```
 
 Then the app:
 
 ```bash
-cd pc-app && uvicorn app.main:app --reload --port 8000
+cd pc-app
+uvicorn app.main:app --reload --port 8000
 ```
 
 Open <http://localhost:8000>. You should see two live readouts and a scrolling chart within a few
@@ -84,7 +87,8 @@ seconds. **No hardware needed** — this is how two of us work while the third h
 ### Check it
 
 ```bash
-cd pc-app && python tools/smoke_test.py
+cd pc-app
+python tools/smoke_test.py
 ```
 
 Expect `18 passed, 0 failed`. Run this before every push.
@@ -92,7 +96,7 @@ Expect `18 passed, 0 failed`. Run this before every push.
 ## 4. Firmware
 
 ```bash
-cd firmware && cp include/secrets.example.h include/secrets.h
+copy firmware\include\secrets.example.h firmware\include\secrets.h
 ```
 
 Edit `include/secrets.h` with your WiFi name and password. It is gitignored — **do not commit it**,
@@ -101,21 +105,27 @@ and do not paste credentials into any other file.
 Build:
 
 ```bash
-cd firmware && pio run
+python -m platformio run -d firmware
 ```
 
 The first build downloads the ESP32 toolchain — around 300 MB and several minutes. A successful
-build ends with a memory summary; ours currently sits at RAM 14.9%, Flash 64.7%.
+build ends with a memory summary; ours currently sits at RAM 14.8%, Flash 62.5%.
 
 Flash the board and watch it boot:
 
 ```bash
-cd firmware && pio run --target upload && pio device monitor
+python -m platformio run -d firmware --target upload
 ```
 
-The serial monitor prints the IP address once WiFi connects. The OLED shows it too. Put that
-address in `pc-app/.env` as `BOX_HOST`, set `BOX_PORT=80`, and restart the PC app to talk to real
-hardware.
+Then open the serial monitor:
+
+```bash
+python -m platformio device monitor -d firmware
+```
+
+It prints the IP address once WiFi connects. Put that address in `pc-app/.env` as `BOX_HOST`, set
+`BOX_PORT=80`, and restart the PC app to talk to real hardware. The LCD does not show the IP —
+both its rows are taken by the two sensors.
 
 If `pio` is not on your PATH, use `python -m platformio` in place of `pio`, or open a
 **PlatformIO Core CLI** terminal from the VS Code PlatformIO sidebar.
@@ -148,11 +158,21 @@ If a package was already half-installed, delete it and let PlatformIO fetch it a
 - Use a data USB cable. Plenty of cables are charge-only and give no port at all.
 - Some boards need `BOOT` held down as the upload starts.
 
-### The OLED stays dark
+### The LCD is blank
 
-Most modules are I2C address `0x3C`, some are `0x3D`. Change `OLED_I2C_ADDR` in
-`firmware/include/config.h`. The serial monitor prints a clear message when the display is not
-found, so check there before suspecting the code.
+Work through it in this order — it is almost always contrast, not wiring.
+
+- **Blank and unlit**: the backlight. Our blue module needs **5 V** on pin 15 through 220 ohm; at
+  3.3 V a blue LED has no headroom and stays dark.
+- **Lit but blank**: contrast. `VDD` must also be on **5 V** — a 5 V HD44780 cannot reach usable
+  contrast from a 3.3 V supply at any pot setting. Then set `V0` (pin 3) to about 0.5 V.
+- **Solid blocks**: too much contrast, or the controller is not being initialised. Back the
+  contrast off first; if blocks persist, check pin 5 `RW` is grounded and that `D4`-`D7` reach
+  GPIO 21, 17, 16, 15 **in that order**.
+- **Text appeared once then vanished**: the display is initialised only at boot, so a power glitch
+  leaves it garbled. Press the ESP32 reset button.
+
+See [the wiring guide](docs/06-breadboard-wiring.md) for the full reasoning.
 
 ### Temperature reads `-127` or the probe is never found
 

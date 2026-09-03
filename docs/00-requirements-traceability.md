@@ -18,7 +18,7 @@ Status key: **DONE** verified · **SW** software complete, needs hardware to ver
 |---|---|---|---|---|---|
 | 1a | PC for user interface, display, control | FastAPI service + browser UI | [`pc-app/`](../pc-app/) | `smoke_test.py` | DONE |
 | 1b | Two probes, 1.0 ±0.1 m cable, robust, survive ice water | DS18B20 sealed stainless probes, 1 m lead, strain relief at both ends | [BOM](02-bill-of-materials.md) | T-8d ice bath | TODO |
-| 1c | Third box: display, buttons, battery, power switch; battery operated; data on internet | ESP32 + SSD1306 OLED + 2 buttons + 18650 pack + panel switch; WiFi station serving JSON | [`firmware/`](../firmware/) | T-3, T-4 | SW |
+| 1c | Third box: display, buttons, battery, power switch; battery operated; data on internet | ESP32 + 16x2 LCD1602 + 2 buttons + 18650 pack + SPDT panel switch; WiFi station serving JSON | [`firmware/`](../firmware/) | T-3, T-4 | SW |
 | 1d | Cellphone receives texts/emails | SMTP email; carrier SMS gateway address for texts | [`alerts.py`](../pc-app/app/alerts.py) | T-7 | SW |
 
 ## 2. Mechanical requirements of the third box
@@ -40,10 +40,10 @@ Status key: **DONE** verified · **SW** software complete, needs hardware to ver
 
 | # | Requirement | How we satisfy it | Where | Verified by | Status |
 |---|---|---|---|---|---|
-| 4a | Correct temperature appears when the button is pressed, no delay above ~20 ms | Buttons polled at the top of `loop()` and again after the 1-Wire read; the display is repainted straight from the debounce edge using the cached reading. I2C runs at 800 kHz so a full frame costs ~11.5 ms, not the ~23 ms it would at 400 kHz. Worst case measured at runtime and reported at `GET /api/info`. | [`main.cpp` `pollButtons`](../firmware/src/main.cpp), [`config.h`](../firmware/include/config.h) | T-4a scope capture | SW |
-| 4b | Readable under normal indoor lighting, all in-range temperatures shown correctly | OLED is self-illuminating and high contrast; layout uses double-height digits for values | [`main.cpp` `renderDisplay`](../firmware/src/main.cpp) | T-4b | SW |
-| 4c | Both buttons independently on or off, screen shows the right thing | Per-sensor `displayOn` flag; all four combinations rendered by the same loop | [`main.cpp` `renderDisplay`](../firmware/src/main.cpp) | T-4c | SW |
-| 4d | Sensor not plugged in or not working: display notifies the user of an error | `present` false renders inverted "SENSOR n ERROR"; a fault is also flagged with "ERR" while the button is off | [`main.cpp` `renderDisplay`](../firmware/src/main.cpp) | T-4d | SW / **ASK** |
+| 4a | Correct temperature appears when the button is pressed, no delay above ~20 ms **(MEASURED 7.3 ms)** | Buttons polled at the top of `loop()` and again after the 1-Wire read; the display is repainted straight from the debounce edge using the cached reading, never waiting for the next sample tick. A full 32-character LCD refresh measures 7.3 ms against the 20 ms budget. Worst case measured at runtime, printed on serial and reported at `GET /api/info`. | [`main.cpp` `pollButtons`](../firmware/src/main.cpp), [`config.h`](../firmware/include/config.h) | T-4a scope capture | SW |
+| 4b | Readable under normal indoor lighting, all in-range temperatures shown correctly | Blue negative-mode LCD1602, backlit from 5 V. One 16-character row per sensor, so the screen shows the handout wording ("Sensor 1 off") rather than an abbreviation | [`main.cpp` `formatRow`](../firmware/src/main.cpp) | T-4b | SW |
+| 4c | Both buttons independently on or off, screen shows the right thing | Per-sensor `displayOn` flag; all four combinations rendered by the same loop | [`main.cpp` `formatRow`](../firmware/src/main.cpp) | T-4c | SW |
+| 4d | Sensor not plugged in or not working: display notifies the user of an error | `present` false renders "Sensor n ERROR"; a fault is still flagged as "Sensor n off ERR" while the button is off, so a fault is never hidden by a switched-off sensor | [`main.cpp` `formatRow`](../firmware/src/main.cpp) | T-4d | SW / **ASK** |
 
 > **ASK (4d):** the requirement says the display must notify the user if *any* sensor is faulty,
 > but requirement 4 also says a sensor whose button is off should read "Sensor n off". We currently

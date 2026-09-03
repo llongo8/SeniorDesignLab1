@@ -46,8 +46,9 @@ network.
 - The ATmega328P is not part of the delivered design. Say so in the report, with this reasoning —
   a documented trade-off is worth more than an unexplained parts list.
 - Firmware targets `espressif32` under PlatformIO; the build is verified in CI-style by
-  `pio run` (currently: RAM 14.9%, Flash 64.7%, zero warnings under `-Wall -Wextra`).
+  `pio run` (currently: RAM 14.8%, Flash 62.5%, zero warnings under `-Wall -Wextra`).
 - The box needs a WiFi network at demo time. We supply our own hotspot rather than depending on
   campus WPA2-Enterprise — see [system design §8](../01-system-design.md#8-network).
-- 3.3 V logic throughout. The DS18B20 and SSD1306 are both happy at 3.3 V, so no level shifting is
-  needed anywhere.
+- 3.3 V logic throughout. The DS18B20s run at 3.3 V. The LCD1602 needs a 5 V supply for contrast
+  and backlight, but its signal lines are driven at 3.3 V and pin 5 `RW` is grounded so it never
+  drives back — no level shifting needed. See the wiring guide.

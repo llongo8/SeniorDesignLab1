@@ -9,15 +9,18 @@ report is worth far more than an assertion that something worked.
 Run before every push. Three terminals:
 
 ```bash
-cd pc-app && python tools/fake_box.py
+cd pc-app
+python tools/fake_box.py
 ```
 
 ```bash
-cd pc-app && uvicorn app.main:app --port 8000
+cd pc-app
+uvicorn app.main:app --port 8000
 ```
 
 ```bash
-cd pc-app && python tools/smoke_test.py
+cd pc-app
+python tools/smoke_test.py
 ```
 
 The smoke test drives the simulator fault-injection endpoints and covers requirements 5a.i, 5a.ii,
@@ -30,7 +33,7 @@ phantom gaps in the graph. Current status: **18 passed, 0 failed**.
 |---|---|---|---|---|
 | T-3 | 3 | Switch the box off. Observe the display and the PC UI. | Display dark. PC shows "no data available" within 10 s. | |
 | T-3b | 3 | Check the switch sense: lever **up** should be on. | Up = powered, down = dark. A backwards switch is an avoidable mark to lose. | |
-| T-4a | 4a | Scope: one probe on the button pin, one on the OLED SCL line. Press the button and measure from the button edge to the start of the I2C burst that follows. Cross-check with `max_button_latency_us` from `GET /api/info`. | **< 20 ms**, worst of 20 presses. | |
+| T-4a | 4a | Press each button ~20 times with the serial monitor open. The firmware prints a `[perf]` line whenever the worst case grows. Cross-check against `max_button_latency_us` at `GET /api/info` once WiFi is up. For an independent check, scope the button pin against the LCD `E` line (GPIO 22). | **< 20 ms**, worst of 20 presses. | **7.3 ms** (bench, 2026-08-27) |
 | T-4b | 4b | View the display under normal room lighting from 1 m, at eye level and at 45°. | All digits legible. | |
 | T-4c | 4c | Exercise all four button combinations: off/off, on/off, off/on, on/on. | Correct value or "Sensor n off" in every case. | |
 | T-4d | 4d | With a button on, unplug that probe. Repeat with the button off. | Error is shown in both cases. | |
