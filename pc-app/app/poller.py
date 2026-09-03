@@ -133,8 +133,25 @@ class BoxPoller:
             self.history.record(sid, temp_c, ts=tick_ts)
             await self.alerts.evaluate(sid, temp_c, cfg)
 
+    @staticmethod
+    def _describe(exc: BaseException) -> str:
+        """Turn an httpx exception into something worth putting on screen.
+
+        The default rendering was `f"{type(exc).__name__}: {exc}"`, which for a
+        connect timeout produces "ConnectTimeout:" -- a bare class name and a
+        colon with nothing after it, because those exceptions carry no message.
+        On the demo screen that reads as a broken string rather than a
+        diagnosis, and it does not tell anyone what to go and check.
+        """
+        if isinstance(exc, (httpx.ConnectError, httpx.ConnectTimeout)):
+            return f"cannot reach the box at {settings.box_host} — check it is powered and on this network"
+        if isinstance(exc, httpx.TimeoutException):
+            return f"the box at {settings.box_host} accepted the connection but did not reply in time"
+        detail = str(exc).strip()
+        return f"{type(exc).__name__}: {detail}" if detail else type(exc).__name__
+
     def _mark_unreachable(self, exc: BaseException) -> None:
-        self.snapshot.last_error = f"{type(exc).__name__}: {exc}"
+        self.snapshot.last_error = self._describe(exc)
         if time.time() - self.snapshot.last_success_ts > OFFLINE_AFTER_S:
             if self.snapshot.online:
                 log.warning("third box unreachable: %s", self.snapshot.last_error)

@@ -97,6 +97,30 @@ function renderLive() {
     vbutton.setAttribute('aria-pressed', String(!!sensor.display_on));
     vbutton.querySelector('.vbutton-state').textContent = sensor.display_on ? 'on' : 'off';
   }
+
+  renderMailStatus(latestLive.alerts);
+}
+
+// Whether mail can actually be sent, shown before you press the button rather
+// than discovered by pressing it.
+function renderMailStatus(alerts) {
+  const el = document.getElementById('smtp-status');
+  if (!el || !alerts) return;
+
+  if (!alerts.smtp_configured) {
+    el.textContent = 'Mail is not configured. Add the SMTP_* values to pc-app/.env, then restart the app — it reads that file only at startup.';
+    el.className = 'smtp-status bad';
+  } else if (alerts.last_error) {
+    el.textContent = `Mail configured, but the last send failed: ${alerts.last_error}`;
+    el.className = 'smtp-status bad';
+  } else if (alerts.sent_count) {
+    const s = alerts.sent_count === 1 ? '' : 's';
+    el.textContent = `Mail configured. ${alerts.sent_count} message${s} sent this session.`;
+    el.className = 'smtp-status ok';
+  } else {
+    el.textContent = 'Mail configured. Nothing sent yet.';
+    el.className = 'smtp-status ok';
+  }
 }
 
 // Requirement 5b -- virtually press a button on the third box.
@@ -304,7 +328,9 @@ const feedback = document.getElementById('alert-feedback');
 function say(message, ok = true) {
   feedback.textContent = message;
   feedback.className = 'feedback ' + (ok ? 'ok' : 'bad');
-  if (message) setTimeout(() => { feedback.textContent = ''; }, 6000);
+  // A success can fade. A failure stays until the next attempt: an SMTP
+  // rejection carries the server's own explanation and is worth reading twice.
+  if (message && ok) setTimeout(() => { feedback.textContent = ''; }, 6000);
 }
 
 async function loadSettings() {

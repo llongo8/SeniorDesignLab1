@@ -61,49 +61,71 @@
 
     <!-- Requirement 7: thresholds, destination and both messages, all editable here. -->
     <section class="alerts-section">
-      <h2>Alerts</h2>
+      <div class="section-head">
+        <h2>Alerts</h2>
+        <label class="toggle">
+          <input type="checkbox" id="alert-enabled">
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          <span class="toggle-text">Enabled</span>
+        </label>
+      </div>
+
+      <p class="smtp-status" id="smtp-status">Checking mail configuration&hellip;</p>
+
       <form id="alert-form">
-        <div class="grid">
-          <label class="check">
-            <input type="checkbox" id="alert-enabled"> Send alerts
-          </label>
+        <fieldset class="field-group">
+          <legend>Trigger</legend>
+          <div class="field-row three">
+            <label>
+              <span class="field-text">Low limit (<span class="unit-label">&deg;C</span>)</span>
+              <input type="number" id="min" step="0.1" required>
+            </label>
+            <label>
+              <span class="field-text">High limit (<span class="unit-label">&deg;C</span>)</span>
+              <input type="number" id="max" step="0.1" required>
+            </label>
+            <label>
+              <span class="field-text">Re-send no sooner than</span>
+              <span class="input-suffix">
+                <input type="number" id="cooldown" min="0" step="10" required>
+                <span class="suffix">seconds</span>
+              </span>
+            </label>
+          </div>
+        </fieldset>
 
-          <label><span class="field-text">Low limit (<span class="unit-label">&deg;C</span>)</span>
-            <input type="number" id="min" step="0.1" required>
-          </label>
-
-          <label><span class="field-text">High limit (<span class="unit-label">&deg;C</span>)</span>
-            <input type="number" id="max" step="0.1" required>
-          </label>
-
-          <label>Re-send no sooner than (s)
-            <input type="number" id="cooldown" min="0" step="10" required>
-          </label>
-
-          <label class="wide">Send to (email address, or a carrier SMS gateway address)
+        <fieldset class="field-group">
+          <legend>Destination</legend>
+          <label>
+            <span class="field-text">Email address, or a carrier SMS gateway address for a text</span>
             <input type="text" id="recipient" placeholder="5551234567@vtext.com">
           </label>
+        </fieldset>
 
-          <label class="wide">Message when too cold
-            <input type="text" id="msg-low">
-          </label>
-
-          <label class="wide">Message when too hot
-            <input type="text" id="msg-high">
-          </label>
-        </div>
-
-        <p class="hint">
-          Placeholders you can use in a message:
-          <code>{sensor}</code> <code>{temp}</code> <code>{limit}</code>
-          <code>{temp_f}</code> <code>{limit_f}</code>
-        </p>
+        <fieldset class="field-group">
+          <legend>Messages</legend>
+          <div class="field-row two">
+            <label>
+              <span class="field-text">When too cold</span>
+              <input type="text" id="msg-low">
+            </label>
+            <label>
+              <span class="field-text">When too hot</span>
+              <input type="text" id="msg-high">
+            </label>
+          </div>
+          <p class="hint">
+            Placeholders:
+            <code>{sensor}</code> <code>{temp}</code> <code>{limit}</code>
+            <code>{temp_f}</code> <code>{limit_f}</code>
+          </p>
+        </fieldset>
 
         <div class="actions">
           <button type="submit" class="primary">Save</button>
           <button type="button" id="test-alert">Send a test message</button>
-          <span id="alert-feedback" class="feedback"></span>
         </div>
+        <p id="alert-feedback" class="feedback"></p>
       </form>
     </section>
   </main>
