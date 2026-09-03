@@ -10,7 +10,7 @@ equipment and supplies stay in the lab unless an instructor says otherwise.
 | 1 | ESP32 DevKit v1 (WROOM-32) | The brain. WiFi is the reason we are not using the ATmega328P. | $8 |
 | 2 | DS18B20 waterproof probe, 1 m stainless lead | Sealed, immersible, −55 to +125 °C, ±0.5 °C. Buy a spare. | $4 ea |
 | 1 | SSD1306 OLED, 128×64, I2C, 0.96" | Check whether yours is address 0x3C or 0x3D. | $5 |
-| 2 | 4.7 kΩ resistor | 1-Wire pull-up, **one per bus** — see the wiring note below. | — |
+| 2 | 4.7 kΩ resistor | 1-Wire pull-up, **one per bus** — see the wiring note below. Ours came in the box with the probes (yellow-violet-red-gold), so none needed ordering. 4.7k–10k all work on a short bus if you ever need a substitute. | included |
 | 2 | Momentary panel-mount pushbutton | One per sensor. | $2 ea |
 | 1 | Toggle switch, 3 terminal SPDT, on-on | Requirement 3. Breaks the battery line; any toggle handles our ~250 mA easily. **Ours is marked "T004"** with a cURus stamp (a UL certification mark, not a brand — there is no datasheet to find under it). Confirmed 2-position on-on. [Wiring note](#using-a-3-terminal-spdt-switch) — the battery feeds a throw, not the common. | $3 |
 
