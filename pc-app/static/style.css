@@ -51,6 +51,9 @@ h2 { font-size: 1rem; margin: 0; color: var(--muted); font-weight: 600; }
 }
 .pill-ok  { background: rgba(63,185,80,.15);  color: var(--ok);  border-color: rgba(63,185,80,.4); }
 .pill-bad { background: rgba(248,81,73,.15);  color: var(--bad); border-color: rgba(248,81,73,.4); }
+/* Deliberately the loudest thing on the page. Simulated data that looks
+   real is how a team ends up demonstrating a simulator to an examiner. */
+.pill-sim { background: var(--warn); color: #1a1200; border-color: var(--warn); font-weight: 700; }
 
 .unit-toggle { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .unit {

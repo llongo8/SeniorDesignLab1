@@ -66,8 +66,17 @@ function renderLive() {
   const online = latestLive.box_online;
 
   const pill = document.getElementById('box-status');
-  pill.textContent = online ? 'third box online' : 'third box offline';
-  pill.className = 'pill ' + (online ? 'pill-ok' : 'pill-bad');
+  if (latestLive.simulated) {
+    // Loud on purpose. Simulated readings that look real are how a team ends
+    // up demonstrating a simulator to an examiner.
+    pill.textContent = `SIMULATED DATA — ${latestLive.box}`;
+    pill.className = 'pill pill-sim';
+  } else {
+    pill.textContent = online
+      ? `third box online — ${latestLive.box}`
+      : 'third box offline';
+    pill.className = 'pill ' + (online ? 'pill-ok' : 'pill-bad');
+  }
 
   for (const sensor of latestLive.sensors) {
     const card = document.querySelector(`.card[data-sensor="${sensor.id}"]`);

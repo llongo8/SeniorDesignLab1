@@ -61,10 +61,16 @@ async def index() -> FileResponse:
 async def live() -> dict:
     """Everything the big readout needs, once a second."""
     snap = poller.snapshot
+    # `box` and `simulated` are reported so the page can never leave you
+    # guessing whether a reading came from a probe or from tools/fake_box.py.
+    # Mistaking simulated data for real data is the most expensive confusion
+    # available in this project.
     return {
         "box_online": snap.online,
         "box_error": snap.last_error,
         "firmware": snap.firmware,
+        "box": f"{settings.box_host}:{settings.box_port}",
+        "simulated": (snap.firmware or "").startswith("fake"),
         "sensors": [
             {
                 "id": sid,
