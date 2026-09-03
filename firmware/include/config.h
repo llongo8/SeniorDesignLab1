@@ -50,7 +50,7 @@
 #define DISPLAY_LCD1602_I2C       1
 #define DISPLAY_LCD1602_PARALLEL  2
 
-#define DISPLAY_TYPE   DISPLAY_LCD1602_I2C
+#define DISPLAY_TYPE   DISPLAY_LCD1602_PARALLEL
 
 #define LCD_COLS       16
 #define LCD_ROWS       2
@@ -77,14 +77,27 @@
 // Direct GPIO, so speed is set by the HD44780 itself: ~37 us execution per
 // character, hence ~1.2 ms for a full 32-character refresh. Comfortably inside
 // requirement 4a, at the cost of six GPIO and a contrast pot.
-// GPIO 12 is deliberately avoided: it is a strapping pin that must be low at
-// reset, and a display wired to it can prevent the board from booting.
-#define PIN_LCD_RS     13
-#define PIN_LCD_EN     14
-#define PIN_LCD_D4     27
-#define PIN_LCD_D5     26
-#define PIN_LCD_D6     25
-#define PIN_LCD_D7     33
+//
+// ALL SIX PINS ARE ON THE SAME HEADER as the sensors, buttons, 3V3 and GND.
+// That is deliberate, not tidiness. A DevKit PCB is wider than the span of its
+// own pin rows, so once it is pushed into a single breadboard the body covers
+// every hole except one column, and only ONE of its two headers can be reached.
+// Wiring the display to the far header (13/14/25/26/27/33, the obvious choice
+// on paper) makes the prototype physically impossible to build on one board.
+//
+// Free pins remaining on this header after sensors and buttons: 23, 22, 21, 17,
+// 16, 15 -- exactly six, which is what a 4-bit HD44780 needs.
+//   GPIO 15 is a strapping pin, but it is safe here: an LCD data pin is a
+//   high-impedance input and cannot pull it at reset.
+//   GPIO 16/17 are free on a WROOM-32. On a WROVER they are wired to the PSRAM
+//   and must not be used -- check which module you have before assuming.
+//   GPIO 21/22 are the I2C pins, unused in parallel mode.
+#define PIN_LCD_RS     23
+#define PIN_LCD_EN     22
+#define PIN_LCD_D4     21
+#define PIN_LCD_D5     17
+#define PIN_LCD_D6     16
+#define PIN_LCD_D7     15
 
 // -----------------------------------------------------------------------------
 // Sensing
