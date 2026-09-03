@@ -64,7 +64,7 @@ A bare 16-pin module runs in 4-bit parallel mode instead: six GPIO plus a contra
 |---|---|---|
 | 1 | `VSS` | blue rail |
 | 2 | `VDD` | red rail |
-| 3 | `V0` | pot **wiper** — the middle leg |
+| 3 | `V0` | pot **wiper** — see "Finding the wiper" below |
 | 4 | `RS` | `GPIO 13` |
 | 5 | `RW` | blue rail (write-only; must be grounded) |
 | 6 | `E` | `GPIO 14` |
@@ -75,9 +75,27 @@ A bare 16-pin module runs in 4-bit parallel mode instead: six GPIO plus a contra
 Pins 7-10 stay unconnected -- that is what makes it 4-bit mode. The pot outer legs go to the red
 and blue rails; which way round makes no difference beyond reversing the direction you turn.
 
-On a 3-legged pot the outer legs are the ends of the resistive track and the middle one is the
-wiper. To confirm: across the outer legs you read the full value and it does not change as you
-turn; between the wiper and either outer leg the reading does change.
+### Finding the wiper
+
+Two footprints are common and they do not agree on which leg is which:
+
+* **Three legs in a line** -- the middle one is the wiper.
+* **Two legs on one side, one on the other** (ours) -- the *lone* leg is the wiper, and the two
+  sharing a side are the ends of the track.
+
+So do not go by position. Measure across the two legs you believe are the track ends: that reading
+is the full value and does **not** change as you turn the screw. Any pair including the wiper does
+change. Whichever leg is not part of the fixed pair is the wiper, and it goes to LCD pin 3 (`V0`).
+
+Which end leg goes to the positive rail and which to ground makes no difference beyond reversing
+the direction you turn.
+
+### Or skip the pot entirely
+
+At 3.3 V the contrast voltage the LCD wants is already close to ground, so a plain jumper from
+`V0` to the negative rail often gives a perfectly readable display. One wire instead of a pot and
+three jumpers -- worth trying first. Fit the pot if the characters come out too faint, or if the
+screen shows solid blocks.
 
 ### Contrast, and why we run the LCD at 3.3 V
 
