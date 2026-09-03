@@ -82,8 +82,8 @@ Status key: **DONE** verified · **SW** software complete, needs hardware to ver
 |---|---|---|---|---|---|
 | 8a | Design range at least −10 to +63 °C (by design, not by test) | DS18B20 is specified −55 to +125 °C, ±0.5 °C over −10 to +85 °C. Firmware stores centi-degrees in `int16_t`, range ±327 °C. The graph clamps at 10/50 °C for display only — the data path is never clamped. | [Design §3](01-system-design.md) | Datasheet argument | SW |
 | 8b | Holding a probe warms it in seconds; a soldering iron does so faster | Thermal mass limited to the probe tip; 11-bit resolution (0.125 °C) resolves the change immediately | — | T-8b | TODO |
-| 8c | Room temperature reads 22 ±4 °C | DS18B20 factory calibration, no user calibration needed | — | T-8c | TODO |
-| 8d | Ice-water mixture reads 0 ±2 °C | Sealed stainless probe, fully immersible | — | T-8d | TODO |
+| 8c | Room temperature reads 22 ±4 °C | DS18B20 factory calibration, no user calibration needed. Probes must be clear of the board — resting them beside the ESP32 adds ~4 °C of self-heating | — | T-8c | **DONE** 21.7–22.2 °C |
+| 8d | Ice-water mixture reads 0 ±2 °C | Sealed stainless probe, fully immersible. Needs a crushed-ice slurry, not cubes in water — cubes read 2–5 °C and fail a good sensor | — | T-8d | **DONE** +0.6 / −0.5 °C |
 
 ---
 
@@ -91,10 +91,11 @@ Status key: **DONE** verified · **SW** software complete, needs hardware to ver
 
 | Status | Count |
 |---|---|
-| DONE (verified end to end) | 13 |
-| SW (software done, awaiting hardware) | 9 |
-| TODO (mechanical / bench measurement) | 7 |
+| DONE (verified end to end) | 14 |
+| SW (software done, awaiting hardware) | 10 |
+| TODO (mechanical / bench measurement) | 5 |
 
-The software risk is largely retired. **The remaining risk is mechanical and it is the part with
+The software risk is retired and both temperature-accuracy requirements are measured and
+passing. **The remaining risk is entirely mechanical, and it is the part with
 the longest lead time** — enclosure, connectors, probe strain relief and the drop test. Order those
 parts first; see [the schedule](04-team-and-schedule.md).
