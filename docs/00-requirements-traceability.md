@@ -74,7 +74,7 @@ Status key: **DONE** verified · **SW** software complete, needs hardware to ver
 
 | # | Requirement | How we satisfy it | Where | Verified by | Status |
 |---|---|---|---|---|---|
-| 7 | Text/email when the temperature goes above a maximum or below a minimum; both messages, both limits and the destination all editable from the computer UI | `AlertEngine` with edge triggering, hysteresis and a cooldown; all six fields edited in the Alerts panel and persisted to `data/alert-settings.json` | [`alerts.py`](../pc-app/app/alerts.py), [`settings_store.py`](../pc-app/app/settings_store.py) | T-7 | SW |
+| 7 | Text/email when the temperature goes above a maximum or below a minimum; both messages, both limits and the destination all editable from the computer UI | `AlertEngine` with edge triggering, hysteresis and a cooldown. Destination is a phone number plus carrier **and** an email address, either or both; each is sent independently so one failing does not suppress the other. All fields edited in the Alerts panel and persisted to `data/alert-settings.json` | [`alerts.py`](../pc-app/app/alerts.py), [`settings_store.py`](../pc-app/app/settings_store.py) | T-7 | **Delivery DONE** (both channels, 2026-09-03); threshold tests T-7-1..4 pending box uptime |
 
 ## 8. Range of operation
 

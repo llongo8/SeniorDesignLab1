@@ -77,6 +77,7 @@ a photograph before and after — a photograph of a box that survived a drop is 
 | T-5c.iii | 5c.iii | Read the x axis. | Labelled in seconds ago, 300 → 0. | |
 | T-5c.iv | 5c.iv | Unplug a probe for 20 s, then take a probe outside the 10–50 °C band. | The gap and the off-scale region are obviously different from each other. | **PASS** 2026-08-27: ice bath drove both traces below the 10 °C floor — clamped at the axis with red off-scale markers — while reflashing left hatched no-data bands. Both visible on one screen; screenshot kept for the report. |
 | T-6 | 6 | With the PC app running, switch the box off, wait 30 s, switch it on. Time it. | Live display and 300 s of graph return **within 10 s**. | |
+| T-7-0 | 7 | Press "Send a test message" with both an email address and a phone number configured. | A message arrives on **both** channels. | **PASS** 2026-09-03: text and email both delivered. Needed a regenerated Gmail app password; the first one was rejected with 535 BadCredentials. |
 | T-7-1 | 7 | Set the max below room temperature. Wait. | Text/email arrives at the configured phone. | |
 | T-7-2 | 7 | Set the min above room temperature. Wait. | The low-temperature message arrives. | |
 | T-7-3 | 7 | Change both messages, both limits and the destination in the UI. Trigger again. | The new text arrives at the new destination. | |
