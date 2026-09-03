@@ -396,7 +396,14 @@ static void handleInfo()
     doc["uptime_ms"]   = millis();
     doc["free_heap"]   = ESP.getFreeHeap();
     doc["history_len"] = histFilled;
+#if DISPLAY_TYPE == DISPLAY_LCD1602_I2C
+    doc["display"]     = "lcd1602-i2c";
     doc["i2c_hz"]      = I2C_CLOCK_HZ;
+#else
+    // No I2C bus in parallel mode, so reporting a clock rate here would be a
+    // diagnostic that quietly lies.
+    doc["display"]     = "lcd1602-parallel";
+#endif
     // Measured worst cases since boot -- quote these in the lab report.
     doc["max_render_us"]         = maxRenderUs;
     doc["max_button_latency_us"] = maxButtonLatencyUs;
