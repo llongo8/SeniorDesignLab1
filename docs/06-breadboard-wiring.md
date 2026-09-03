@@ -13,11 +13,13 @@ wiring the whole thing and then trying to work out which of five subsystems is b
 ## Before you start
 
 **All logic runs at 3.3 V.** The ESP32 GPIO pins are 3.3 V and are **not** 5 V tolerant. The
-DS18B20s and the LCD controller are powered from the **3V3** pin, never from VIN or 5V. Getting
-this wrong can damage the ESP32, and it is the single most common way this board gets killed.
+DS18B20s are powered from the **3V3** pin, never from VIN or 5V. Getting this wrong can damage the
+ESP32, and it is the single most common way this board gets killed.
 
-The one exception is the LCD backlight, which is an isolated LED across pins 15 and 16 and touches
-no GPIO. On our blue module it needs 5 V -- see [below](#a-blue-lcd-needs-5-v-for-its-backlight).
+The LCD is the exception: our module runs its controller and its backlight from 5 V, because a
+5 V HD44780 cannot reach usable contrast on a 3.3 V supply. Only its six signal lines are 3.3 V,
+and pin 5 `RW` tied to ground is what stops it driving anything back. See
+[the contrast section](#contrast-the-lcd-itself-also-needs-5-v).
 
 **The DevKit is wide.** It spans the centre channel of the breadboard and typically leaves only one
 or two free tie points per pin. Use a full-size (830 point) board, and seat the module so its pins
@@ -44,7 +46,7 @@ keeps the layout readable and means you wire the module once.
 | **Sensor 2** black (or blue) | blue rail | GND |
 | **Sensor 2** yellow (or white) | ESP32 `GPIO 5` | data |
 | **4.7 kΩ #2** | `GPIO 5` ←→ red rail | **mandatory pull-up** |
-| **LCD** `VCC` | red rail | 3.3 V — see the contrast note below |
+| **LCD** `VDD` | **5 V** | not the 3V3 rail — see the contrast section |
 | **LCD** `GND` | blue rail | |
 | **LCD** `SDA` | ESP32 `GPIO 21` | backpack variant only |
 | **LCD** `SCL` | ESP32 `GPIO 22` | backpack variant only |
@@ -66,8 +68,8 @@ A bare 16-pin module runs in 4-bit parallel mode instead: six GPIO plus a contra
 | LCD pin | Label | To |
 |---|---|---|
 | 1 | `VSS` | blue rail |
-| 2 | `VDD` | red rail |
-| 3 | `V0` | pot **wiper** — see "Finding the wiper" below |
+| 2 | `VDD` | **5 V** — not the 3V3 rail, see the contrast section |
+| 3 | `V0` | pot **wiper** — see "Finding the wiper" below; pot ends to 5 V and ground |
 | 4 | `RS` | `GPIO 23` |
 | 5 | `RW` | blue rail (write-only; must be grounded) |
 | 6 | `E` | `GPIO 22` |
@@ -83,8 +85,8 @@ and only **one of its two headers can be reached at all**. These six are the pin
 same header as the sensors, buttons, 3V3 and GND. The tidy-looking choice (13, 14, 25, 26, 27, 33)
 is on the far header and makes the prototype physically impossible to wire on one board.
 
-`VIN` is on that unreachable header too, so the 5 V our backlight needs has to come from somewhere
-else for now -- see the blue-backlight section below. Getting both headers back needs a second
+`VIN` is on that unreachable header too, so the 5 V the LCD needs -- for both its controller and
+its backlight -- has to come from somewhere else for now; see the two sections below. Getting both headers back needs a second
 breadboard butted against the first with the module straddling the join, or female-to-male jumpers
 with the module sitting beside the board. Worth solving before the final build.
 
@@ -103,12 +105,12 @@ change. Whichever leg is not part of the fixed pair is the wiper, and it goes to
 Which end leg goes to the positive rail and which to ground makes no difference beyond reversing
 the direction you turn.
 
-### Or skip the pot entirely
+### The pot is not optional at 5 V
 
-At 3.3 V the contrast voltage the LCD wants is already close to ground, so a plain jumper from
-`V0` to the negative rail often gives a perfectly readable display. One wire instead of a pot and
-three jumpers -- worth trying first. Fit the pot if the characters come out too faint, or if the
-screen shows solid blocks.
+An earlier version of this guide suggested tying `V0` straight to ground to save fitting the pot.
+That worked only while `VDD` was 3.3 V. With `VDD` at 5 V, grounding `V0` asks for maximum
+contrast and the screen fills with solid blocks instead of text. The useful setting is a few
+tenths of a volt above ground, which is exactly the fine adjustment a pot exists to provide.
 
 ### A blue LCD needs 5 V for its backlight
 
@@ -122,8 +124,7 @@ A blue LED has a forward voltage of about 3.2 V. On a 3.3 V rail that leaves ~0.
 series resistor, so no resistor value produces useful current. **The backlight has to run from 5 V.**
 
 The backlight is electrically independent of the HD44780 -- just an LED across pins 15 and 16,
-sharing only ground -- so it can run from 5 V while `VDD` stays on 3.3 V, which keeps the logic
-levels clean and avoids any level shifting:
+sharing only ground:
 
 | LCD pin | To |
 |---|---|
@@ -132,20 +133,37 @@ levels clean and avoids any level shifting:
 
 (5 - 3.2) / 220 is about 8 mA, a normal backlight current.
 
+The controller needs 5 V as well, for a different reason -- see the contrast section below.
+
 Sources of 5 V, given that `VIN` is on the unreachable header: the kit Uno powered from its own USB
 (run its `5V` to a spare row and **tie its `GND` to our negative rail** so the boards share a
 reference), a breadboard power module such as an MB102, or -- properly -- a second breadboard or
 female-to-male jumpers so `VIN` becomes reachable.
 
-### Contrast, and why the logic runs at 3.3 V
+### Contrast: the LCD itself also needs 5 V
 
-HD44780 modules are nominally 5 V parts and the contrast is often weak at 3.3 V -- expect to wind
-the pot near one extreme before anything appears. We accept that on purpose. A backpack powered at
-5 V pulls SDA and SCL up to 5 V, and **the ESP32 is not 5 V tolerant**, so 5 V costs you the board.
+Contrast on an HD44780 is set by the difference `VDD - V0`, and a 5 V module wants roughly 4.2 to
+4.7 V of it. Run `VDD` at 3.3 V and the most you can produce is 3.3 V even with `V0` pulled all the
+way to ground -- so the screen stays uniformly blank at **every** pot setting. That is not a wiring
+fault and no amount of adjusting fixes it.
 
-If it is genuinely unreadable at 3.3 V, do not simply move it to 5 V. Either add a bidirectional
-level shifter on SDA/SCL, or use the parallel variant above, which is electrically clean at 3.3 V
-throughout because nothing pulls the GPIO above the rail.
+So the module runs from 5 V: pin 2 `VDD`, the backlight, and the pot high end. Only the six signal
+lines stay at 3.3 V, driven by the ESP32.
+
+**Why this is safe, and what makes it safe.** Pin 5 `RW` is hardwired to ground, so the HD44780 is
+permanently in write mode and never drives its data pins -- `D4`-`D7`, `RS` and `E` are all inputs,
+always. Nothing can push 5 V back into a 3.3 V GPIO. Grounding `RW` is therefore not housekeeping,
+it is the interlock that makes a 5 V display safe to drive from 3.3 V logic. If `RW` were ever
+allowed to float high, the display would drive 5 V straight into the ESP32.
+
+The remaining wrinkle is the other direction: at `VDD` = 5 V the HD44780 wants a logic high of
+0.7 x 5 = 3.5 V, and the ESP32 delivers 3.3 V. That is marginally out of spec and works on the
+large majority of modules. If yours proves flaky, the fix is a level shifter on the six signal
+lines, not lowering `VDD`.
+
+**The I2C backpack variant is the opposite case.** There the backpack pulls SDA and SCL up to its
+own supply, so powering *it* at 5 V would put 5 V on two ESP32 pins with nothing to stop it. A
+backpack must either run at 3.3 V or go through a bidirectional level shifter.
 
 ### Layout sketch
 
