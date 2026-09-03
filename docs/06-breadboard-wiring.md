@@ -69,7 +69,7 @@ A bare 16-pin module runs in 4-bit parallel mode instead: six GPIO plus a contra
 | 5 | `RW` | blue rail (write-only; must be grounded) |
 | 6 | `E` | `GPIO 22` |
 | 11-14 | `D4 D5 D6 D7` | `GPIO 21`, `17`, `16`, `15` |
-| 15 | `A` | red rail through a 220 ohm |
+| 15 | `A` | 220 ohm to **5 V** -- not the 3V3 rail, see below |
 | 16 | `K` | blue rail |
 
 Pins 7-10 stay unconnected -- that is what makes it 4-bit mode.
@@ -107,7 +107,34 @@ At 3.3 V the contrast voltage the LCD wants is already close to ground, so a pla
 three jumpers -- worth trying first. Fit the pot if the characters come out too faint, or if the
 screen shows solid blocks.
 
-### Contrast, and why we run the LCD at 3.3 V
+### A blue LCD needs 5 V for its backlight
+
+Ours is the blue module, and that is not just a colour choice. Blue LCD1602s are negative-mode
+STN -- white characters on a blue field -- which is **transmissive**: the characters are lit from
+behind and the display is unreadable with the backlight off. The yellow-green modules are the
+opposite, reflective, and perfectly readable unlit. So on a blue module the backlight is not
+cosmetic, and requirement 4b depends on it.
+
+A blue LED has a forward voltage of about 3.2 V. On a 3.3 V rail that leaves ~0.1 V across the
+series resistor, so no resistor value produces useful current. **The backlight has to run from 5 V.**
+
+The backlight is electrically independent of the HD44780 -- just an LED across pins 15 and 16,
+sharing only ground -- so it can run from 5 V while `VDD` stays on 3.3 V, which keeps the logic
+levels clean and avoids any level shifting:
+
+| LCD pin | To |
+|---|---|
+| 15 `A` | 220 ohm to **5 V** |
+| 16 `K` | blue rail (ground, shared with the ESP32) |
+
+(5 - 3.2) / 220 is about 8 mA, a normal backlight current.
+
+Sources of 5 V, given that `VIN` is on the unreachable header: the kit Uno powered from its own USB
+(run its `5V` to a spare row and **tie its `GND` to our negative rail** so the boards share a
+reference), a breadboard power module such as an MB102, or -- properly -- a second breadboard or
+female-to-male jumpers so `VIN` becomes reachable.
+
+### Contrast, and why the logic runs at 3.3 V
 
 HD44780 modules are nominally 5 V parts and the contrast is often weak at 3.3 V -- expect to wind
 the pot near one extreme before anything appears. We accept that on purpose. A backpack powered at
