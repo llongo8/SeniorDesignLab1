@@ -65,15 +65,25 @@ A bare 16-pin module runs in 4-bit parallel mode instead: six GPIO plus a contra
 | 1 | `VSS` | blue rail |
 | 2 | `VDD` | red rail |
 | 3 | `V0` | pot **wiper** — see "Finding the wiper" below |
-| 4 | `RS` | `GPIO 13` |
+| 4 | `RS` | `GPIO 23` |
 | 5 | `RW` | blue rail (write-only; must be grounded) |
-| 6 | `E` | `GPIO 14` |
-| 11-14 | `D4 D5 D6 D7` | `GPIO 27`, `26`, `25`, `33` |
+| 6 | `E` | `GPIO 22` |
+| 11-14 | `D4 D5 D6 D7` | `GPIO 21`, `17`, `16`, `15` |
 | 15 | `A` | red rail through a 220 ohm |
 | 16 | `K` | blue rail |
 
-Pins 7-10 stay unconnected -- that is what makes it 4-bit mode. The pot outer legs go to the red
-and blue rails; which way round makes no difference beyond reversing the direction you turn.
+Pins 7-10 stay unconnected -- that is what makes it 4-bit mode.
+
+**Why these six GPIO and not tidier ones.** A DevKit PCB is wider than the span of its own pin
+rows, so once it is pushed into a single breadboard the body covers every hole except one column
+and only **one of its two headers can be reached at all**. These six are the pins left free on the
+same header as the sensors, buttons, 3V3 and GND. The tidy-looking choice (13, 14, 25, 26, 27, 33)
+is on the far header and makes the prototype physically impossible to wire on one board.
+
+`VIN` is on that unreachable header too, which is why the LCD runs from 3V3 here rather than 5 V.
+Getting both headers back needs a second breadboard butted against the first with the module
+straddling the join, or female-to-male jumpers with the module sitting beside the board. Worth
+solving before the final build.
 
 ### Finding the wiper
 
