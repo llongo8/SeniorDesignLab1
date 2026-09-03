@@ -4,7 +4,7 @@
 //
 // Responsibilities:
 //   * Sample two DS18B20 probes once per second, non-blocking.
-//   * Drive a local OLED showing per-sensor temperature / OFF / ERROR.
+//   * Drive a local 16x2 LCD showing per-sensor temperature / off / error.
 //   * Toggle each sensor local display from a physical button OR the network.
 //   * Keep the last 300 s of readings so the PC can draw history the instant
 //     its software starts.
@@ -17,8 +17,6 @@
 #include <Wire.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
 #include <WiFi.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
@@ -27,13 +25,27 @@
 #include "config.h"
 #include "secrets.h"
 
+#if DISPLAY_TYPE == DISPLAY_LCD1602_I2C
+#include <LiquidCrystal_I2C.h>
+#elif DISPLAY_TYPE == DISPLAY_LCD1602_PARALLEL
+#include <LiquidCrystal.h>
+#else
+#error "DISPLAY_TYPE must be DISPLAY_LCD1602_I2C or DISPLAY_LCD1602_PARALLEL"
+#endif
+
 // -----------------------------------------------------------------------------
 // Hardware objects
 // -----------------------------------------------------------------------------
 static const uint8_t SENSOR_COUNT = 2;
 
-static Adafruit_SSD1306 oled(OLED_WIDTH, OLED_HEIGHT, &Wire, -1);
-static WebServer        server(HTTP_PORT);
+#if DISPLAY_TYPE == DISPLAY_LCD1602_I2C
+static LiquidCrystal_I2C lcd(LCD_I2C_ADDR, LCD_COLS, LCD_ROWS);
+#else
+static LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_EN,
+                         PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN_LCD_D7);
+#endif
+
+static WebServer server(HTTP_PORT);
 
 static const uint8_t buttonPins[SENSOR_COUNT] = { PIN_BUTTON_1, PIN_BUTTON_2 };
 
@@ -78,66 +90,60 @@ static uint32_t maxButtonLatencyUs = 0;
 
 // -----------------------------------------------------------------------------
 // Display
+//
+// The requirement logic lives in formatRow() and knows nothing about the
+// hardware; displayShow() knows about the hardware and nothing about the
+// requirements. That split is what lets the same firmware drive either LCD
+// wiring variant without the wording of Requirement 4 being restated twice.
 // -----------------------------------------------------------------------------
+
+// Build one 16-character row for a sensor, space padded to the full width.
+static void formatRow(uint8_t i, char *out)
+{
+    if (sensor[i].displayOn && sensor[i].present) {
+        // Req 4: temperature in degrees C for a sensor whose button is on.
+        snprintf(out, LCD_COLS + 1, "Sensor %u %5.1fC", i + 1, sensor[i].tempC);
+
+    } else if (sensor[i].displayOn) {
+        // Req 4d: button on, but the probe is unplugged or not answering.
+        snprintf(out, LCD_COLS + 1, "Sensor %u ERROR", i + 1);
+
+    } else if (!sensor[i].present) {
+        // Both at once. Req 4 wants "Sensor n off"; Req 4d wants the user told
+        // about a fault on ANY sensor, including one whose button is off. This
+        // says both, in exactly 16 characters.
+        // ACTION: confirm this reading with the TA -- see docs/05-open-questions.md
+        snprintf(out, LCD_COLS + 1, "Sensor %u off ERR", i + 1);
+
+    } else {
+        // Req 4: the exact wording the handout asks for.
+        snprintf(out, LCD_COLS + 1, "Sensor %u off", i + 1);
+    }
+
+    // Pad to the full width so a shorter line overwrites whatever was there
+    // before. The alternative is lcd.clear(), which costs 1.5 ms of HD44780
+    // execution time and makes the display visibly flicker on every update.
+    for (size_t n = strlen(out); n < LCD_COLS; n++) out[n] = ' ';
+    out[LCD_COLS] = '\0';
+}
+
+static void displayShow(const char *row0, const char *row1)
+{
+    lcd.setCursor(0, 0);
+    lcd.print(row0);
+    lcd.setCursor(0, 1);
+    lcd.print(row1);
+}
+
 static void renderDisplay()
 {
     const uint32_t t0 = micros();
 
-    oled.clearDisplay();
-    oled.setTextColor(SSD1306_WHITE);
-
-    // Header: how to reach us on the network.
-    oled.setTextSize(1);
-    oled.setCursor(0, 0);
-    if (WiFi.status() == WL_CONNECTED) {
-        oled.print(WiFi.localIP());
-    } else {
-        oled.print(F("WiFi: connecting..."));
-    }
-    oled.drawFastHLine(0, 10, OLED_WIDTH, SSD1306_WHITE);
-
-    for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
-        const int16_t y = 14 + i * 26;
-
-        if (sensor[i].displayOn && sensor[i].present) {
-            // Normal case: "S1  22.5C"
-            oled.setTextSize(1);
-            oled.setCursor(0, y + 4);
-            oled.printf("S%u", i + 1);
-
-            oled.setTextSize(2);
-            oled.setCursor(20, y);
-            oled.printf("%.1fC", sensor[i].tempC);
-
-        } else if (sensor[i].displayOn && !sensor[i].present) {
-            // Req 4d: sensor unplugged or faulty while its button is on.
-            // Inverted text so the fault is unmistakable at a glance.
-            oled.setTextSize(1);
-            oled.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
-            oled.setCursor(0, y + 4);
-            oled.printf(" SENSOR %u ERROR ", i + 1);
-            oled.setTextColor(SSD1306_WHITE);
-
-        } else {
-            // Req 4: the screen must say so when the button for a sensor is off.
-            oled.setTextSize(1);
-            oled.setCursor(0, y + 4);
-            oled.printf("Sensor %u off", i + 1);
-
-            // Req 4d says "if ANY temperature sensor is not plugged into the
-            // third box ... the display should notify the user". We therefore
-            // still flag the fault while the button is off.
-            // ACTION: confirm this reading with the TA -- see docs/05-open-questions.md
-            if (!sensor[i].present) {
-                oled.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
-                oled.setCursor(92, y + 4);
-                oled.print(F("ERR"));
-                oled.setTextColor(SSD1306_WHITE);
-            }
-        }
-    }
-
-    oled.display();   // the expensive part: one full 1024-byte I2C frame
+    char row0[LCD_COLS + 1];
+    char row1[LCD_COLS + 1];
+    formatRow(0, row0);
+    formatRow(1, row1);
+    displayShow(row0, row1);
 
     const uint32_t dt = micros() - t0;
     if (dt > maxRenderUs) maxRenderUs = dt;
@@ -446,19 +452,31 @@ void setup()
     for (uint8_t i = 0; i < SENSOR_COUNT; i++)
         for (uint16_t k = 0; k < HISTORY_LEN; k++) history[i][k] = HISTORY_INVALID;
 
+#if DISPLAY_TYPE == DISPLAY_LCD1602_I2C
+    // The backpack has no way to report that it is there, so probe the address
+    // ourselves. A silent display is otherwise indistinguishable from dead
+    // firmware, and that wastes an afternoon.
     Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL, I2C_CLOCK_HZ);
-    if (!oled.begin(SSD1306_SWITCHCAPVCC, OLED_I2C_ADDR)) {
-        // Nothing more we can usefully do -- but say so loudly on the serial
-        // port so a dead display is not mistaken for dead firmware.
-        Serial.println(F("[oled] NOT FOUND -- check wiring and the 0x3C/0x3D address"));
+    Wire.beginTransmission(LCD_I2C_ADDR);
+    if (Wire.endTransmission() != 0) {
+        Serial.printf("[lcd] no I2C device at 0x%02X -- check wiring, and try "
+                      "0x3F instead of 0x27 in config.h\n", LCD_I2C_ADDR);
+    } else {
+        Serial.printf("[lcd] backpack found at 0x%02X\n", LCD_I2C_ADDR);
     }
-    oled.clearDisplay();
-    oled.setTextColor(SSD1306_WHITE);
-    oled.setTextSize(1);
-    oled.setCursor(0, 0);
-    oled.println(F("ECE:4880 Lab 1"));
-    oled.println(F("Third box booting"));
-    oled.display();
+    lcd.init();
+    lcd.backlight();
+#else
+    lcd.begin(LCD_COLS, LCD_ROWS);
+    Serial.println(F("[lcd] parallel mode; if the screen is blank but lit, "
+                     "adjust the contrast pot"));
+#endif
+
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(F("ECE:4880 Lab 1"));
+    lcd.setCursor(0, 1);
+    lcd.print(F("Third box boot.."));
 
     for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
         const bool found = discoverBus(i);

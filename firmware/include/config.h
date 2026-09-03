@@ -27,7 +27,7 @@
 #define PIN_BUTTON_1   18
 #define PIN_BUTTON_2   19
 
-// SSD1306 OLED, I2C.
+// I2C bus -- used by the LCD1602 backpack variant.
 #define PIN_I2C_SDA    21
 #define PIN_I2C_SCL    22
 
@@ -35,22 +35,56 @@
 #define PIN_STATUS_LED 2
 
 // -----------------------------------------------------------------------------
-// Display
+// Display -- HD44780 16x2 character LCD ("LCD1602")
+//
+// 16 columns x 2 rows is a good fit for requirement 4: one row per sensor, and
+// "Sensor 1 off" is 12 characters, so the display can say exactly what the
+// handout asks for rather than an abbreviation.
+//
+// Set DISPLAY_TYPE to match the module you actually have:
+//
+//   DISPLAY_LCD1602_I2C       a small daughterboard is soldered to the back
+//                             (chip + blue trimmer pot), 4 pins: GND VCC SDA SCL
+//   DISPLAY_LCD1602_PARALLEL  bare module, one row of 16 pins, no daughterboard
 // -----------------------------------------------------------------------------
-#define OLED_WIDTH     128
-#define OLED_HEIGHT    64
-#define OLED_I2C_ADDR  0x3C   // some modules are 0x3D -- check the silkscreen
+#define DISPLAY_LCD1602_I2C       1
+#define DISPLAY_LCD1602_PARALLEL  2
 
-// TIMING BUDGET -- Requirement 4a: display must update within 20 ms of a press.
-// A full 128x64 SSD1306 frame is 1024 payload bytes. Over I2C each byte costs
-// ~9 bit-times, so the transfer alone is:
-//     400 kHz -> 1024 * 9 / 400000  = 23.0 ms   <-- BLOWS THE 20 ms BUDGET
-//     800 kHz -> 1024 * 9 / 800000  = 11.5 ms   <-- fits, with room to spare
-// We therefore run the bus at 800 kHz. Most SSD1306 modules are specified for
-// 400 kHz but run reliably well past 1 MHz on short (<15 cm) traces. If your
-// display glitches, drop to 400000 and switch to a partial-window update.
-// The firmware measures the real worst case at runtime -- see /api/info.
-#define I2C_CLOCK_HZ   800000
+#define DISPLAY_TYPE   DISPLAY_LCD1602_I2C
+
+#define LCD_COLS       16
+#define LCD_ROWS       2
+
+// -- I2C backpack variant -----------------------------------------------------
+#define LCD_I2C_ADDR   0x27   // most PCF8574 backpacks; some are 0x3F
+
+// TIMING BUDGET -- Requirement 4a: the display must update within 20 ms of a
+// button press. LiquidCrystal_I2C sends each character as two 4-bit nibbles,
+// and each nibble costs three single-byte I2C transactions (data, data|EN,
+// data) to strobe the enable line. At ~20 bit-times per transaction that is
+// about 120 bit-times per character, so a full 32-character refresh is ~3840:
+//     100 kHz -> 3840 / 100000 = 38.4 ms   <-- BLOWS THE 20 ms BUDGET
+//     400 kHz -> 3840 / 400000 =  9.6 ms   <-- fits
+// We therefore run the bus at 400 kHz. The PCF8574 is specified for 100 kHz
+// standard mode, so this is outside its datasheet; it works on typical modules
+// but it is exactly the sort of claim that must be measured rather than
+// assumed. The firmware reports the real worst case at GET /api/info.
+// If the display glitches, drop to 100000 -- and then requirement 4a needs a
+// different approach, most likely the parallel variant below.
+#define I2C_CLOCK_HZ   400000
+
+// -- Parallel variant (bare 16-pin module, 4-bit mode) ------------------------
+// Direct GPIO, so speed is set by the HD44780 itself: ~37 us execution per
+// character, hence ~1.2 ms for a full 32-character refresh. Comfortably inside
+// requirement 4a, at the cost of six GPIO and a contrast pot.
+// GPIO 12 is deliberately avoided: it is a strapping pin that must be low at
+// reset, and a display wired to it can prevent the board from booting.
+#define PIN_LCD_RS     13
+#define PIN_LCD_EN     14
+#define PIN_LCD_D4     27
+#define PIN_LCD_D5     26
+#define PIN_LCD_D6     25
+#define PIN_LCD_D7     33
 
 // -----------------------------------------------------------------------------
 // Sensing
