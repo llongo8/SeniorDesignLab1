@@ -440,8 +440,7 @@ async function refreshSmsPreview() {
   }
 }
 
-form.addEventListener('submit', async (event) => {
-  event.preventDefault();
+async function saveSettings() {
   const body = {
     enabled: document.getElementById('alert-enabled').checked,
     min_c: toCelsius(parseFloat(document.getElementById('min').value)),
@@ -459,20 +458,29 @@ form.addEventListener('submit', async (event) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
     const saved = await res.json();
+    if (!res.ok) throw new Error(saved.detail || res.statusText);
     renderSmsPreview(saved.sms_address);
-    say('Saved.');
+    return true;
   } catch (err) {
     say(`Could not save: ${err.message}`, false);
+    return false;
   }
+}
+
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (await saveSettings()) say('Saved.');
 });
 
 document.getElementById('test-alert').addEventListener('click', async () => {
-  say('Sending...');
+  say('Saving and sending...');
   try {
-    // Sends to whatever is saved, so hitting Test without saving first tells
-    // you about the stored settings rather than the ones on screen.
+    // Save first. The test sends to stored settings, so without this an address
+    // typed but not saved is silently ignored -- you get a result about the old
+    // configuration and no hint that the new one was never used.
+    if (!(await saveSettings())) return;
+
     const res = await fetch('/api/alerts/test', { method: 'POST' });
     const body = await res.json();
     if (!res.ok) throw new Error(body.detail || res.statusText);

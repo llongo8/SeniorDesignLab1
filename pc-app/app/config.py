@@ -38,12 +38,17 @@ class Settings(BaseSettings):
 
     @field_validator("smtp_password")
     @classmethod
-    def _strip_spaces(cls, value: str) -> str:
+    def _strip_whitespace(cls, value: str) -> str:
         """Google displays app passwords as four groups of four, so that is how
         everybody pastes them. The spaces are presentational and the server does
-        not want them. Strip them here rather than expecting each teammate to
-        know, because the resulting failure is an opaque authentication error."""
-        return value.replace(" ", "")
+        not want them.
+
+        Strips every kind of whitespace, not just the space character: a paste
+        can carry a newline, a tab, or a non-breaking space, and every one of
+        them produces the same opaque 535 rejection with nothing to suggest the
+        password is merely the wrong length.
+        """
+        return "".join(value.split())
 
     @property
     def box_base_url(self) -> str:
