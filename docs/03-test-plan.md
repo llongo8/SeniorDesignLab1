@@ -39,7 +39,8 @@ phantom gaps in the graph. Current status: **18 passed, 0 failed**.
 | T-4d | 4d | With a button on, unplug that probe. Repeat with the button off. | Error is shown in both cases. | |
 | T-2d | 2d | Unplug a probe for 30 s, plug it back in. Touch nothing else. | Reading returns within ~4 s with no reset, no button press, no reconnection. | |
 | T-8b | 8b | Hold the probe tip in a closed hand. Then bring a hot soldering iron close to it. | Rises within a few seconds; faster with the iron. | |
-| T-8c | 8c | Leave both probes on the bench for 5 minutes. Compare against the lab thermometer. | **22 ±4 °C**. | |
+| T-8c | 8c | Leave both probes in still air **away from the ESP32** for 5 minutes — a board running WiFi is a small heater. Compare against a lab thermometer. | **22 ±4 °C** (18–26 °C). | Bench 2026-08-27: **26.7 °C, marginally over.** See T-8d and Q10. |
+| T-8e | 8c | Bundle both probe tips together in still air for 5 minutes. | The two agree within ~1 °C. A larger gap means at least one part is outside its ±0.5 °C spec. | |
 | T-8d | 8d | Stirred ice-and-water mixture, probe fully immersed, 2 minutes to settle. | **0 ±2 °C**. Record both probes. | |
 | T-8a | 8a | Design argument only — the handout says this need not be tested. | Datasheet range cited in the report. | |
 

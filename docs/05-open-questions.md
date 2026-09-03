@@ -19,6 +19,7 @@ and record the answer here with the date.
 | Q6 | **Req 1c, "battery operated."** Must the box run from battery during the demo, or is it enough that it *can*? | Affects how we present the checkoff. | We will demo on battery. | |
 | Q7 | **Req 5c.i, fixed 10–50 °C limits.** Requirement 8 wants a design range of −10 to +63 °C, but the graph is pinned to 10–50 °C. Confirm the graph really should clip rather than autoscale. | We have built it to clip and mark off-scale points. Autoscaling would be a bug. | Fixed limits always, off-scale clearly marked. | |
 | Q8 | **Network.** Is there a lab network we may use, or should we bring our own hotspot? Campus eduroam is WPA2-Enterprise and often has client isolation. | Determines connection code and demo logistics. | We bring our own hotspot or travel router. | |
+| Q10 | **Req 8c in a warm lab.** The requirement expects about 22 C at room temperature, +/- 4, so 18-26 C. Our bench reads 26.7 C (80 F), just over the top of that band. If the room genuinely sits above 26 C, a correct thermometer fails the stated test. How should we demonstrate 8c? | Determines whether this is a sensor problem or a room problem. | Pending the ice-bath result: if T-8d passes, the probes are accurate and the room is warm. | |
 | Q9 | **Report template.** The slides mention a lab report template will be provided. Where is it posted? | Structures the deliverable. | Not yet received. | |
 
 ## How to use this file
