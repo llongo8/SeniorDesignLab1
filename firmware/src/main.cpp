@@ -264,6 +264,15 @@ static void reportSerial()
         else                   Serial.print(F("  --.-- ?"));
         Serial.print(sensor[i].displayOn ? F(" [on] ") : F(" [off]"));
     }
+
+    // Raw button pin levels. With INPUT_PULLUP an unpressed button reads HIGH,
+    // so "H" is the resting state and "L" means pressed *or* shorted to ground.
+    // A pin stuck at L with nothing being touched is a wiring fault, and this
+    // is the only way to see that from outside the box.
+    Serial.print(F("   btn "));
+    for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
+        Serial.print(digitalRead(buttonPins[i]) == LOW ? 'L' : 'H');
+    }
     Serial.println();
 #endif
 }
