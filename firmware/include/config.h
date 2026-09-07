@@ -136,6 +136,17 @@
 // -----------------------------------------------------------------------------
 #define DEBOUNCE_MS            25
 
+// How often to re-send the HD44780 setup sequence.
+//
+// The display is a write-only device with RW grounded, so there is no way to
+// ask whether it is still configured. If it browns out, or its supply comes up
+// after the ESP32 has already initialised it -- which is easy when the LCD runs
+// from a separate 5 V source -- it drops into an unconfigured state and renders
+// the incoming data as garbage forever. Re-syncing on a timer makes that
+// self-healing instead of needing a reset. See resyncDisplay() for why this is
+// not simply lcd.begin().
+#define LCD_RESYNC_PERIOD_MS   5000
+
 // -----------------------------------------------------------------------------
 // Diagnostics
 // -----------------------------------------------------------------------------

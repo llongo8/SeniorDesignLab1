@@ -135,6 +135,63 @@ static void displayShow(const char *row0, const char *row1)
     lcd.print(row1);
 }
 
+#if DISPLAY_TYPE == DISPLAY_LCD1602_PARALLEL
+static void pulseEnable()
+{
+    digitalWrite(PIN_LCD_EN, HIGH);
+    delayMicroseconds(1);
+    digitalWrite(PIN_LCD_EN, LOW);
+    delayMicroseconds(100);   // > 37 us HD44780 execution time
+}
+
+static void writeNibble(uint8_t value)
+{
+    digitalWrite(PIN_LCD_D4, (value >> 0) & 1);
+    digitalWrite(PIN_LCD_D5, (value >> 1) & 1);
+    digitalWrite(PIN_LCD_D6, (value >> 2) & 1);
+    digitalWrite(PIN_LCD_D7, (value >> 3) & 1);
+    pulseEnable();
+}
+
+// Put the display back into a known state without a full power-on init.
+//
+// NOT lcd.begin(): that opens with a 50 ms power-on wait and totals about 65 ms.
+// A button press landing inside that would wait for it and miss the 20 ms of
+// Requirement 4a. The long wait exists to let the supply settle at power-on and
+// is pointless on a display that is already running, so re-syncing needs only
+// the 4-bit handshake -- about 10 ms. Worst case then becomes 10 ms of resync
+// plus 7.3 ms to repaint, still inside budget.
+//
+// No clear() either: it costs 1.5 ms of HD44780 execution and flickers, and
+// renderDisplay() overwrites all 32 characters regardless.
+static void resyncDisplay()
+{
+    digitalWrite(PIN_LCD_RS, LOW);    // command register
+    digitalWrite(PIN_LCD_EN, LOW);
+
+    // Reset by instruction: 0x03 three times reaches 8-bit mode from any state
+    // the controller might be stuck in, then 0x02 selects 4-bit.
+    writeNibble(0x03); delayMicroseconds(4500);
+    writeNibble(0x03); delayMicroseconds(4500);
+    writeNibble(0x03); delayMicroseconds(150);
+    writeNibble(0x02); delayMicroseconds(150);
+
+    // Now in 4-bit mode: high nibble first, then low.
+    static const uint8_t setup[] = {
+        0x28,   // function set: 4-bit, 2 lines, 5x8 font
+        0x0C,   // display on, cursor off, blink off
+        0x06,   // entry mode: increment, no display shift
+    };
+    for (uint8_t command : setup) {
+        writeNibble(command >> 4);
+        writeNibble(command & 0x0F);
+    }
+}
+#else
+static void resyncDisplay() {}   // the backpack variant re-inits via lcd.init()
+#endif
+
+
 static void renderDisplay()
 {
     const uint32_t t0 = micros();
@@ -147,6 +204,16 @@ static void renderDisplay()
 
     const uint32_t dt = micros() - t0;
     if (dt > maxRenderUs) maxRenderUs = dt;
+}
+
+static void pollDisplayResync()
+{
+    static uint32_t lastMs = 0;
+    if (millis() - lastMs < LCD_RESYNC_PERIOD_MS) return;
+    lastMs = millis();
+
+    resyncDisplay();
+    renderDisplay();   // the resync left the panel configured but blank of intent
 }
 
 // -----------------------------------------------------------------------------
@@ -492,6 +559,13 @@ void setup()
                      "adjust the contrast pot"));
 #endif
 
+    // The LCD may run from a different supply than the ESP32 -- ours does, off
+    // the Uno 5 V rail -- so its rail can still be rising while we boot. Give it
+    // a moment, then re-sync, so a late-starting display is configured now
+    // rather than at the first periodic resync.
+    delay(200);
+    resyncDisplay();
+
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print(F("ECE:4880 Lab 1"));
@@ -542,6 +616,7 @@ void loop()
     pollButtons();
 
     pollRediscovery();
+    pollDisplayResync();
     pollWiFi();
 
     // Heartbeat -- a slow blink means the main loop is still running.
