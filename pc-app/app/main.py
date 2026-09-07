@@ -34,8 +34,23 @@ alerts = AlertEngine()
 poller = BoxPoller(history, alerts)
 
 
+def _quiet_connection_reset(loop: asyncio.AbstractEventLoop, context: dict) -> None:
+    """Swallow the traceback Windows prints when a browser tab goes away.
+
+    The proactor event loop reports ConnectionResetError from a half-closed
+    socket through the loop exception handler, which prints a full traceback for
+    something entirely normal: a client closed the page mid-response. Nothing is
+    broken and the server carries on, but the log then looks like a crash, and a
+    log that cries wolf is one nobody reads. Real errors still print.
+    """
+    if isinstance(context.get("exception"), ConnectionResetError):
+        return
+    loop.default_exception_handler(context)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    asyncio.get_running_loop().set_exception_handler(_quiet_connection_reset)
     task = asyncio.create_task(poller.run(), name="box-poller")
     try:
         yield
