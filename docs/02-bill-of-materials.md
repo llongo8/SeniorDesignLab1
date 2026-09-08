@@ -1,72 +1,88 @@
 # Bill of Materials
 
-Check the lab stockroom (2319 SC / 1313 SC) before ordering anything. Remember the lab rules:
-equipment and supplies stay in the lab unless an instructor says otherwise.
+Doubles as the shopping list. Check the lab stockroom (2319 SC / 1313 SC) before ordering anything.
+Remember the lab rules: equipment and supplies stay in the lab unless an instructor says otherwise.
 
-## Core electronics
+**Status:** ✅ have it, verified working · 🛒 still to get · ⚠️ have it but not yet proven
 
-| Qty | Item | Notes | Est. |
-|---|---|---|---|
-| 1 | ESP32 DevKit v1 (WROOM-32) | The brain. WiFi is the reason we are not using the ATmega328P. | $8 |
-| 2 | DS18B20 waterproof probe, 1 m stainless lead | Sealed, immersible, −55 to +125 °C, ±0.5 °C. Buy a spare. | $4 ea |
-| 1 | LCD1602, 16x2 character LCD | Ours is the bare 16-pin module (blue backlight). 16x2 lets the screen spell "Sensor 1 off" exactly as requirement 4 words it. Needs 5 V — see the wiring guide. | $5 |
-| 2 | 4.7 kΩ resistor | 1-Wire pull-up, **one per bus** — see the wiring note below. Ours came in the box with the probes (yellow-violet-red-gold), so none needed ordering. 4.7k–10k all work on a short bus if you ever need a substitute. | included |
-| 2 | Momentary panel-mount pushbutton | One per sensor. | $2 ea |
-| 1 | Toggle switch, 3 terminal SPDT, on-on | Requirement 3. Breaks the battery line; any toggle handles our ~250 mA easily. **Ours is marked "T004"** with a cURus stamp (a UL certification mark, not a brand — there is no datasheet to find under it). Confirmed 2-position on-on. [Wiring note](#using-a-3-terminal-spdt-switch) — the battery feeds a throw, not the common. | $3 |
+---
 
-## Connectors and cable (requirement 2b)
+## 1. Core electronics — all working on the breadboard
 
-| Qty | Item | Notes | Est. |
-|---|---|---|---|
-| 2 | GX12-3 panel connector, male + female pair | 3 pins = 3V3 / DATA / GND. Threaded, keyed, meant for repeated use by a casual user. | $4 pr |
-| — | Heat-shrink, cable glands or grommets | Strain relief at both ends of every probe lead. | $5 |
+| ✔ | Qty | Item | Notes | Est. |
+|---|---|---|---|---|
+| ✅ | 1 | ESP32 DevKit v1 (WROOM-32) | The brain. WiFi is why we are not using the ATmega328P — see [ADR-001](decisions/ADR-001-esp32-as-main-mcu.md). | $8 |
+| ✅ | 2 | DS18B20 waterproof probe, 1 m stainless lead | Sealed, immersible, −55 to +125 °C. Ice bath measured +0.6 / −0.5 °C. | $4 ea |
+| ✅ | 2 | 4.7 kΩ resistor | 1-Wire pull-up, **one per bus**. Came in the box with the probes. | included |
+| ✅ | 1 | LCD1602, bare 16-pin, blue backlight | Blue is negative-mode STN, so it needs its backlight lit to be readable at all. Runs from 5 V. | $5 |
+| ✅ | 1 | 10 kΩ trimmer potentiometer | LCD contrast on pin 3. Two legs one side, one the other — the lone leg is the wiper. | $1 |
+| ✅ | 1 | 220 Ω resistor | LCD backlight current limit, from 5 V. | included |
+| ✅ | 2 | Tactile pushbutton (breadboard) | Prototype only — the final build wants panel-mount. | included |
+| ⚠️ | 1 | Toggle switch, 3 terminal SPDT, on-on | Marked "T004", cURus stamp. Confirmed on-on by detent count. **Not yet wired.** Check it has a threaded bushing for panel mounting; if not, buy one that does. | $3 |
+| ✅ | 1 | Breadboard, 830 point | REXQualis kit. | included |
+| ✅ | — | Jumper wires, male-male | REXQualis kit. | included |
+| ✅ | 1 | USB data cable | A charge-only cable cost us an hour — this one is known good. | included |
 
-3.5 mm TRS jacks are the cheap alternative and also carry three conductors, but they are easy to
-short while being inserted (the sleeve sweeps across the ring and tip on the way in). With 3V3 and
-GND on those contacts, that is a momentary short of the supply on every plug-in. GX12 avoids it.
+> The **Arduino Uno** currently supplies 5 V to the LCD. It is scaffolding, not part of the design,
+> and disappears once we have a real 5 V supply.
 
-## Power (requirement 1c)
+## 2. To finish the prototype (requirement 3)
 
-| Qty | Item | Notes | Est. |
-|---|---|---|---|
-| 1 | Protected 18650 cell, ~3000 mAh | Protected only. Never an unprotected cell in a student enclosure. | $8 |
-| 1 | 18650 holder | Must be **screwed down**, not loose — requirement 2a is a drop test. | $2 |
-| 1 | TP4056 charge module with protection | USB charging without opening the box. | $2 |
-| 1 | MT3608 or similar 5 V boost | 3.7 V cell → 5 V into ESP32 VIN. | $2 |
+| ✔ | Qty | Item | Why | Est. |
+|---|---|---|---|---|
+| 🛒 | 1 | **Second breadboard**, 830 or 400 point | The blocker. A DevKit is wider than its own pin span, so on one board its body covers every hole but one column and **only one of its two headers can be reached**. `VIN` and `EN` are both on the unreachable side, and requirement 3 needs to switch the box's power input. Butt two boards together and let the module straddle the join. Female-to-male jumpers also work if the kit has any. | $5 |
+| 🛒 | 1 | **5 V power source** — pick one: | | |
+| | | *(a)* USB power bank + USB-A breakout board | Cheapest; most of us own the bank. ~12 h from 5000 mAh. Test early — some banks cut out below 50–100 mA. | $3 |
+| | | *(b)* 18650 + holder + TP4056 + MT3608 boost | What this BOM specifies. ~7 h, recharges in place, reads better in the report than a power bank cable-tied inside a box. Protected cells only. | $14 |
 
-A USB power bank plus a USB-A breakout board (about $3) is the cheapest substitute and most of us
-already own one: 5 V straight out, rechargeable, and roughly 12 hours from a 5000 mAh bank. Test it
-early -- some banks switch themselves off below about 50-100 mA, and our ~200 mA usually keeps them
-awake but not always.
+See [why the rail must be 5 V](#why-the-supply-has-to-be-5-v-and-not-9-v) — in particular, do not
+use the 9 V battery the kit clip is made for.
 
-### Why the supply has to be 5 V, and not 9 V
+## 3. Enclosure and panel (requirements 1b, 2a–2c)
 
-Both loads want 5 V. `VIN` is happy there, and so are the LCD `VDD` and backlight, so a single 5 V
-rail powers everything with no second regulator.
+Longest lead time, and the part that cannot be compressed at the end. Order first.
 
-**Do not use a 9 V battery**, which is the obvious thing to reach for given the 9 V clip in the kit:
+| ✔ | Qty | Item | Notes | Est. |
+|---|---|---|---|---|
+| 🛒 | 1 | ABS project box, ~120 × 80 × 40 mm | Must fit the cell, board, LCD and two connectors. | $10 |
+| 🛒 | 2 | GX12-3 panel connector, male + female pair | 3 pins = 3V3 / DATA / GND. Threaded, keyed, made for repeated use by a casual user (req 2b), and they pull free rather than transmitting shock into the PCB (req 2c). | $4 pr |
+| 🛒 | 2 | Panel-mount momentary pushbutton, 12 mm | The tactile switches are breadboard parts and will not survive a drop test or a panel cutout. | $2 ea |
+| 🛒 | 1 | Perfboard, ~70 × 50 mm | **No breadboard in the final build** — requirement 2a is a drop from bench height. | $5 |
+| 🛒 | — | M3 standoffs, screws, nuts | Everything inside is fastened. Nothing rests. A loose cell in a dropped box is a hammer. | $5 |
+| 🛒 | 2 | Cable gland or rubber grommet | Strain relief where each probe lead enters the box. | $3 |
 
-* The DevKit drops `VIN` to 3.3 V with a linear AMS1117. From 9 V at our ~200 mA that is
-  `(9 - 3.3) x 0.2 = 1.1 W` dissipated in a SOT-223 package. It gets very hot and thermally shuts
-  down, which presents as an ESP32 that is mysteriously unreliable.
-* It does not help the LCD. `VIN` is an input only -- the DevKit has no 5 V output -- so a 9 V
-  battery still leaves the display needing its own regulator.
-* A 9 V alkaline is about 500 mAh nominal and much less at 200 mA. One or two hours.
+**LCD panel cutout:** the module is ~80 × 36 mm with mounting holes on 75 × 31 mm centres. The
+visible window needs roughly 71 × 26 mm. Cut the rectangle with a rotary tool or drill-and-file, and
+mount on M3 standoffs so the glass is not stressed.
 
-4xAA gives 6 V, which `VIN` handles, but 6 V is above the HD44780 5.5 V limit so the LCD would need
-its own regulator. Workable, but it adds a part rather than removing one.
+**Probe cable length (req 1b: 1.0 ± 0.1 m):** measure from the connector face to the probe tip
+*after* terminating the GX12, not the bare lead. The connector adds length.
 
-Whichever we choose, write down which and why -- the trade-off is worth a paragraph in the report.
+## 4. Consumables and tools
 
-## Enclosure and mechanical (requirements 2a–2c)
+Mostly stocked in the lab — check before buying.
 
-| Qty | Item | Notes | Est. |
-|---|---|---|---|
-| 1 | ABS project box, ~120 × 80 × 40 mm | Room for the cell, board, display and two connectors. | $10 |
-| — | M3 standoffs, screws, nuts | Everything inside is fastened. Nothing rests. | $5 |
-| — | Perfboard or a small custom PCB | **No breadboard in the final build.** It will not survive the drop test. | $5 |
+| ✔ | Item | Notes |
+|---|---|---|
+| 🛒 | Hookup wire, 22 AWG stranded | Stranded, not solid: solid wire work-hardens and snaps under vibration. |
+| 🛒 | Heat-shrink assortment | Every joint outside a connector shell. |
+| 🛒 | Solder | Lab restocks it; email TA Joel if it is out. |
+| ✅ | Multimeter | Lab bench. Already earned its keep on the switch and the buttons. |
+| — | Soldering iron, wire strippers, drill, step bit, file or rotary tool | Lab equipped. |
 
-**Estimated total: $75–90**, less whatever the stockroom supplies.
+## Cost
+
+| Group | Est. |
+|---|---|
+| Already have | ~$30 |
+| Finish the prototype | $8–19 |
+| Enclosure and panel | ~$35 |
+| Consumables | ~$10 |
+| **Still to spend** | **$50–65** |
+
+Less whatever the stockroom supplies.
+
+---
 
 ## Wiring notes
 
@@ -90,17 +106,24 @@ devices that both went quiet — for no benefit, since we have GPIO to spare.
 | Button 2 | 19 |
 | LCD RS | 23 |
 | LCD E | 22 |
-| LCD D4-D7 | 21, 17, 16, 15 |
+| LCD D4–D7 | 21, 17, 16, 15 |
 | Status LED | 2 (onboard) |
 
-Avoided deliberately: **GPIO 6–11** are wired to the SPI flash and using them prevents boot;
-**GPIO 0, 2, 12, 15** are strapping pins that change boot mode if held at reset; **GPIO 34–39** are
-input-only with no internal pull-ups, so they cannot serve as our buttons.
+Every one of these is on the **same header**, which is not tidiness — see the note in
+[the wiring guide](06-breadboard-wiring.md). Avoided deliberately: **GPIO 6–11** are wired to the
+SPI flash and using them prevents boot; **GPIO 0, 2, 12** are strapping pins that change boot mode
+if held at reset; **GPIO 34–39** are input-only with no internal pull-ups, so they cannot serve as
+our buttons.
 
 ### Buttons
 
 Wired to ground and using the internal pull-ups (`INPUT_PULLUP`), so pressed reads LOW. No external
 resistors. Debounce is 25 ms in firmware.
+
+A 4-leg tactile switch is **two pairs already joined inside the part**, and the joined legs are the
+two on the same side of the breadboard channel. Taking both wires from one side shorts the GPIO
+straight to ground — which cost us an evening on button 1. One wire each side of the channel, same
+row. The firmware prints raw pin levels as `btn HH`; an `L` at rest is always a wiring fault.
 
 ### Using a 3-terminal SPDT switch
 
@@ -118,7 +141,7 @@ Ours is a 2-position **on-on**, confirmed by the detent count. Wire it like this
 ```
    battery + ──────────►  [ terminal A ]
                                  │   closed when the lever selects A  ->  ON
-                          [ common / centre ] ────────►  5 V boost input
+                          [ common / centre ] ────────►  5 V rail (VIN + LCD)
                                  │   closed when the lever selects B  ->  OFF
                                  X  [ terminal B ]  left unconnected
 ```
@@ -134,8 +157,7 @@ find the cell holder, the boost module or a stray strand.
 Feeding a throw instead means terminal B is only ever connected to the (now isolated) load side, so
 it is never live. Insulate or trim it anyway; free solder lugs move around during a drop test.
 
-**Identify the common pin before soldering.** It is almost always the centre one, but confirm it
-rather than assume:
+**Identify the common pin before soldering.** It is almost always the centre one, but confirm it:
 
 1. Multimeter to continuity (the beeping mode).
 2. Probe centre against one outer terminal. Flip the lever back and forth.
@@ -143,10 +165,6 @@ rather than assume:
    outer terminal in the other position. The pin that beeps in *both* positions is the common.
 4. If instead one pair beeps in one position only and never involves a third pin, you have an SPST
    with a spare or illuminated terminal — see the warning below.
-
-**Ours is on-on** (two detents), so the box is powered in one position and unpowered in the other.
-That is exactly what requirement 3 needs. The only thing still to determine at the bench is which
-pin is the common and which throw gives lever-up = on.
 
 **Pick the outer terminal so that "up" means on.** On a standard toggle, the lever points *away*
 from the contact it closes, so the up position usually closes the *lower* terminal. Do not guess:
@@ -160,9 +178,29 @@ otherwise free.
 > internal LED, look up its part number before wiring it. The continuity test above distinguishes
 > them: a true SPDT has one pin common to both lever positions, an illuminated SPST does not.
 
-### Keep the I2C run short
+### Why the supply has to be 5 V, and not 9 V
 
-The display bus runs at 800 kHz to meet the 20 ms budget of requirement 4a — see
-[the timing analysis](01-system-design.md#the-20-ms-trap). Keep SDA/SCL under about 15 cm inside
-the box. If the display glitches, drop `I2C_CLOCK_HZ` to 400000 and expect to redesign the update
-path to a partial window instead of a full frame.
+Both loads want 5 V. `VIN` is happy there, and so are the LCD `VDD` and backlight, so a single 5 V
+rail powers everything with no second regulator.
+
+**Do not use a 9 V battery**, which is the obvious thing to reach for given the 9 V clip in the kit:
+
+- The DevKit drops `VIN` to 3.3 V with a linear AMS1117. From 9 V at our ~200 mA that is
+  `(9 − 3.3) × 0.2 ≈ 1.1 W` dissipated in a SOT-223 package. It gets very hot and thermally shuts
+  down, which presents as an ESP32 that is mysteriously unreliable.
+- It does not help the LCD. `VIN` is an input only — the DevKit has no 5 V output — so a 9 V
+  battery still leaves the display needing its own regulator.
+- A 9 V alkaline is about 500 mAh nominal and much less at 200 mA. One or two hours.
+
+4×AA gives 6 V, which `VIN` handles, but 6 V is above the HD44780 5.5 V limit so the LCD would need
+its own regulator. Workable, but it adds a part rather than removing one.
+
+Whichever we choose, write down which and why — the trade-off is worth a paragraph in the report.
+
+### Keep the LCD signal runs short
+
+The display is driven in 4-bit parallel mode, six signal lines at 3.3 V into a 5 V part. That is
+inside the HD44780 logic-high threshold with little margin, so keep those runs short and direct on
+the perfboard. If the display turns flaky rather than dead once it is boxed, that margin is the
+first suspect, and the fix is a level shifter on the six lines — not lowering `VDD`, which costs
+contrast.
