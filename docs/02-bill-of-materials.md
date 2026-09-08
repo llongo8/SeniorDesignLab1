@@ -34,8 +34,29 @@ GND on those contacts, that is a momentary short of the supply on every plug-in.
 | 1 | TP4056 charge module with protection | USB charging without opening the box. | $2 |
 | 1 | MT3608 or similar 5 V boost | 3.7 V cell → 5 V into ESP32 VIN. | $2 |
 
-4×AA in a holder is a perfectly good alternative and avoids all lithium handling questions. It is
-bulkier and not rechargeable. Either is defensible; write down which you chose and why.
+A USB power bank plus a USB-A breakout board (about $3) is the cheapest substitute and most of us
+already own one: 5 V straight out, rechargeable, and roughly 12 hours from a 5000 mAh bank. Test it
+early -- some banks switch themselves off below about 50-100 mA, and our ~200 mA usually keeps them
+awake but not always.
+
+### Why the supply has to be 5 V, and not 9 V
+
+Both loads want 5 V. `VIN` is happy there, and so are the LCD `VDD` and backlight, so a single 5 V
+rail powers everything with no second regulator.
+
+**Do not use a 9 V battery**, which is the obvious thing to reach for given the 9 V clip in the kit:
+
+* The DevKit drops `VIN` to 3.3 V with a linear AMS1117. From 9 V at our ~200 mA that is
+  `(9 - 3.3) x 0.2 = 1.1 W` dissipated in a SOT-223 package. It gets very hot and thermally shuts
+  down, which presents as an ESP32 that is mysteriously unreliable.
+* It does not help the LCD. `VIN` is an input only -- the DevKit has no 5 V output -- so a 9 V
+  battery still leaves the display needing its own regulator.
+* A 9 V alkaline is about 500 mAh nominal and much less at 200 mA. One or two hours.
+
+4xAA gives 6 V, which `VIN` handles, but 6 V is above the HD44780 5.5 V limit so the LCD would need
+its own regulator. Workable, but it adds a part rather than removing one.
+
+Whichever we choose, write down which and why -- the trade-off is worth a paragraph in the report.
 
 ## Enclosure and mechanical (requirements 2a–2c)
 
