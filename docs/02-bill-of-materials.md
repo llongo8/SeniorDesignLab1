@@ -183,7 +183,8 @@ otherwise free.
 Both loads want 5 V. `VIN` is happy there, and so are the LCD `VDD` and backlight, so a single 5 V
 rail powers everything with no second regulator.
 
-**Do not use a 9 V battery**, which is the obvious thing to reach for given the 9 V clip in the kit:
+**Do not feed a 9 V battery straight into `VIN`**, which is the obvious thing to do given the 9 V
+clip in the kit:
 
 - The DevKit drops `VIN` to 3.3 V with a linear AMS1117. From 9 V at our ~200 mA that is
   `(9 − 3.3) × 0.2 ≈ 1.1 W` dissipated in a SOT-223 package. It gets very hot and thermally shuts
@@ -191,6 +192,37 @@ rail powers everything with no second regulator.
 - It does not help the LCD. `VIN` is an input only — the DevKit has no 5 V output — so a 9 V
   battery still leaves the display needing its own regulator.
 - A 9 V alkaline is about 500 mAh nominal and much less at 200 mA. One or two hours.
+
+### Resistors cannot substitute for a regulator
+
+Tempting, and wrong: **a resistor divider is not a regulator, because its output moves with the
+load.** Our current swings from ~40 mA idle to 400 mA when the WiFi transmits.
+
+Size a series resistor to drop 9 V to 5 V at 200 mA and you get `R = 4 / 0.2 = 20 Ω`. Then:
+
+| State | Current | Drop across 20 Ω | Voltage at the box |
+|---|---|---|---|
+| Idle | 40 mA | 0.8 V | **8.2 V** — past the LCD 5.5 V limit |
+| Average | 200 mA | 4.0 V | 5.0 V |
+| WiFi transmit | 400 mA | 8.0 V | **1.0 V** — brownout and reset |
+
+Correct at exactly one current, and the load never holds still. It would damage the LCD at idle and
+reset the board on every transmission, while burning 0.8 W in a resistor that would need a 2 W
+rating.
+
+### Using the 9 V battery properly
+
+With a **regulator** in front of it, 9 V is fine — the objection above is only to feeding `VIN`
+directly. Two ways:
+
+- **MB102 breadboard power supply module.** Clips onto the power rails, takes a barrel jack input
+  (which the kit 9 V clip plugs straight into) and outputs switchable 3.3 V / 5 V. Often included in
+  REXQualis kits — check before buying anything.
+- **LM2596 buck converter, ~$2.** Switching, ~85% efficient, adjustable output trimmed to 5 V.
+
+Runtime is the remaining catch: ~500 mAh at 200 mA is about **2 hours**. Enough for a checkoff
+demo, poor for anything else. A USB power bank is also a 5 V battery, gives ~12 hours, and
+recharges.
 
 4×AA gives 6 V, which `VIN` handles, but 6 V is above the HD44780 5.5 V limit so the LCD would need
 its own regulator. Workable, but it adds a part rather than removing one.
