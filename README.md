@@ -41,6 +41,7 @@ temperature-threshold alerts.
 3. **[`docs/04-team-and-schedule.md`](docs/04-team-and-schedule.md)** — who owns what, and the week-by-week plan.
 4. **[`SETUP.md`](SETUP.md)** — get your machine building and running in ~20 minutes.
 5. **[`docs/06-breadboard-wiring.md`](docs/06-breadboard-wiring.md)** — build the bench prototype, one stage at a time.
+6. **[`docs/07-breadboard-layout.md`](docs/07-breadboard-layout.md)** — the tidy layout: every part's position and every wire, on battery power.
 
 ## Quick start (after SETUP.md)
 
