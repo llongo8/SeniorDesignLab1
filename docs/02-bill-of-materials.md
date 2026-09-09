@@ -15,7 +15,7 @@ Remember the lab rules: equipment and supplies stay in the lab unless an instruc
 | ✅ | 2 | DS18B20 waterproof probe, 1 m stainless lead | Sealed, immersible, −55 to +125 °C. Ice bath measured +0.6 / −0.5 °C. | $4 ea |
 | ✅ | 2 | 4.7 kΩ resistor | 1-Wire pull-up, **one per bus**. Came in the box with the probes. | included |
 | ✅ | 1 | LCD1602, bare 16-pin, blue backlight | Blue is negative-mode STN, so it needs its backlight lit to be readable at all. Runs from 5 V. | $5 |
-| ✅ | 1 | 10 kΩ trimmer potentiometer | LCD contrast on pin 3. Two legs one side, one the other — the lone leg is the wiper. | $1 |
+| — | 1 | 10 kΩ trimmer potentiometer | **Not used.** Contrast is a fixed 10 kΩ / 1 kΩ divider instead — at 5 V the usable window is narrow enough that a pot is fiddly to set and easy to knock. | $1 |
 | ✅ | 1 | 220 Ω resistor | LCD backlight current limit, from 5 V. | included |
 | ✅ | 2 | Tactile pushbutton (breadboard) | Prototype only — the final build wants panel-mount. | included |
 | ⚠️ | 1 | Toggle switch, 3 terminal SPDT, on-on | Marked "T004", cURus stamp. Confirmed on-on by detent count. **Not yet wired.** Check it has a threaded bushing for panel mounting; if not, buy one that does. | $3 |

@@ -14,7 +14,7 @@ column-then-row, so `a18` is column a, row 18.
 
 | Rail | Voltage | Source | Feeds |
 |---|---|---|---|
-| **LEFT `+`** | 5 V | MB102, left jumper on **5 V** | LCD `VDD`, LCD backlight, contrast pot high end |
+| **LEFT `+`** | 5 V | MB102, left jumper on **5 V** | LCD `VDD`, LCD backlight, contrast divider |
 | **LEFT `−`** | ground | MB102 | everything |
 | **RIGHT `+`** | 3.3 V | **ESP32 `3V3` pin**, not the module | both probes, both 4.7 kΩ pull-ups |
 | **RIGHT `−`** | ground | MB102 (both `−` rails are common through the module) | everything |
@@ -38,7 +38,7 @@ row 21    sensor 2 data + its 4.7k
 row 25/27 button 1        (straddles the channel)
 row 30/32 button 2        (straddles the channel)
 
-row 35/37 contrast pot    (paired legs one side, lone leg the other)
+row 35    contrast divider (two fixed resistors, no pot)
 
 row 40-55 LCD             (see the note below - wires, not plugged in)
 
@@ -101,16 +101,24 @@ Legs land in `e25 e27 f25 f27` and `e30 e32 f30 f32`.
 > ground through the switch's internal link — the fault that cost an evening. Serial prints
 > `btn HH` when both are correct; an `L` at rest is always a wiring error.
 
-### Contrast pot — rows 35–37
+### Contrast — fixed divider, row 35
 
-| # | From | To |
-|---|---|---|
-| 21 | paired leg `f35` | `g35` → LEFT `+` rail (5 V) |
-| 22 | **lone leg (wiper)** `j36` | `i36` → LCD `V0` |
-| 23 | paired leg `f37` | `g37` → LEFT `−` rail |
+No pot. Contrast on an HD44780 is `VDD − V0`, and at `VDD` = 5 V the useful `V0` sits only a few
+tenths of a volt above ground — a narrow window a pot makes fiddly to hit and easy to knock out of
+adjustment. Two fixed resistors put it exactly where it belongs and cannot drift:
 
-Three legs, three different rows, three separate nodes. If the paired legs land in the same row you
-have shorted the track and the pot does nothing.
+| # | From | To | Gives |
+|---|---|---|---|
+| 21 | **10 kΩ**, one leg `a35` | other leg to LEFT `+` rail (5 V) | |
+| 22 | **1 kΩ**, one leg `b35` | other leg to LEFT `−` rail | `V0` = 5 × 1/11 ≈ **0.45 V** |
+| 23 | `c35` | LCD `V0` (pin 3) | |
+
+All three share row 35, the divider's midpoint. If the display comes out too dark or too faint,
+change only the lower resistor: **1.5 kΩ** raises `V0` to 0.65 V (lighter), **680 Ω** drops it to
+0.32 V (darker).
+
+Tying `V0` straight to ground also works on some modules, but at 5 V it asks for maximum contrast
+and usually fills the screen with solid blocks. The divider is two parts and no guesswork.
 
 ### LCD — 16 pins
 
@@ -118,7 +126,7 @@ have shorted the track and the pot does nothing.
 |---|---|---|
 | 1 | `VSS` | LEFT `−` rail |
 | 2 | `VDD` | LEFT `+` rail (5 V) |
-| 3 | `V0` | pot wiper (`i36`) |
+| 3 | `V0` | `c35`, the divider midpoint |
 | 4 | `RS` | `a`(D23 row) |
 | 5 | `RW` | LEFT `−` rail — **mandatory** |
 | 6 | `E` | `a`(D22 row) |
