@@ -34,9 +34,10 @@ Remember the lab rules: equipment and supplies stay in the lab unless an instruc
 | 🛒 | 1 | **5 V power source** — pick one: | | |
 | | | *(a)* USB power bank + USB-A breakout board | Cheapest; most of us own the bank. ~12 h from 5000 mAh. Test early — some banks cut out below 50–100 mA. | $3 |
 | | | *(b)* 18650 + holder + TP4056 + MT3608 boost | What this BOM specifies. ~7 h, recharges in place, reads better in the report than a power bank cable-tied inside a box. Protected cells only. | $14 |
+| | | *(c)* 9 V battery + MB102 module **or** LM2596 buck | Uses the 9 V clip already in the kit. Check for an MB102 before buying — REXQualis kits often include one and it takes the barrel plug directly. Only ~2 h of runtime, which is enough for a checkoff demo. | $0–2 |
 
-See [why the rail must be 5 V](#why-the-supply-has-to-be-5-v-and-not-9-v) — in particular, do not
-use the 9 V battery the kit clip is made for.
+See [why the rail must be 5 V](#the-rail-must-be-5-v-however-it-is-generated). A 9 V battery is
+fine *behind a regulator* — what it must not do is feed `VIN` directly.
 
 ## 3. Enclosure and panel (requirements 1b, 2a–2c)
 
@@ -178,7 +179,7 @@ otherwise free.
 > internal LED, look up its part number before wiring it. The continuity test above distinguishes
 > them: a true SPDT has one pin common to both lever positions, an illuminated SPST does not.
 
-### Why the supply has to be 5 V, and not 9 V
+### The rail must be 5 V, however it is generated
 
 Both loads want 5 V. `VIN` is happy there, and so are the LCD `VDD` and backlight, so a single 5 V
 rail powers everything with no second regulator.
