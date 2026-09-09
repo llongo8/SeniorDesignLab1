@@ -1,6 +1,6 @@
 # Tidy Breadboard Layout
 
-The organised version of the prototype: MB102 module on a 9 V battery, panel switch in the battery
+The organised version of the prototype: HW-131 supply module on a 9 V battery, panel switch in the battery
 line, everything on one 830-point board. Build from [the staged guide](06-breadboard-wiring.md)
 first if nothing is wired yet — this is about *placement*, not about bringing subsystems up.
 
@@ -14,10 +14,10 @@ column-then-row, so `a18` is column a, row 18.
 
 | Rail | Voltage | Source | Feeds |
 |---|---|---|---|
-| **LEFT `+`** | 5 V | MB102, left jumper on **5 V** | LCD `VDD`, LCD backlight, contrast divider |
-| **LEFT `−`** | ground | MB102 | everything |
+| **LEFT `+`** | 5 V | supply module, its jumper on **5 V** | LCD `VDD`, LCD backlight, contrast divider |
+| **LEFT `−`** | ground | supply module | everything |
 | **RIGHT `+`** | 3.3 V | **ESP32 `3V3` pin**, not the module | both probes, both 4.7 kΩ pull-ups |
-| **RIGHT `−`** | ground | MB102 (both `−` rails are common through the module) | everything |
+| **RIGHT `−`** | ground | supply module (both `−` rails are common through it) | everything |
 
 > **Set the module's jumper for the 3.3 V rail to OFF.** That rail is driven by the ESP32's own
 > regulator; if the module drives it too, two regulators fight over a rail neither controls. The
@@ -56,7 +56,7 @@ row 35    contrast divider (two fixed resistors, no pot)
 
 row 37-52 LCD             (column i, body overhanging the right edge)
 
-row 60-65 MB102 module    (clips onto the rails, spans the board)
+row 60-65 supply module   (clips onto the rails, spans the board)
 
 off-board  SPDT switch, wires only, in the battery + line
 ```
@@ -74,9 +74,9 @@ since pin order differs between DevKit variants. Everything else is an exact hol
 | # | From | To | Note |
 |---|---|---|---|
 | 1 | 9 V battery **+** (red) | switch **terminal A** | switch is off-board, wires only |
-| 2 | switch **common** | MB102 barrel plug **centre** | battery feeds a throw, load off the common |
-| 3 | 9 V battery **−** (black) | MB102 barrel plug **sleeve** | |
-| 4 | MB102 USB-A output | ESP32 USB port, via a spare cable | **powers the ESP32** — see §5 |
+| 2 | switch **common** | module barrel plug **centre** | battery feeds a throw, load off the common |
+| 3 | 9 V battery **−** (black) | module barrel plug **sleeve** | |
+| 4 | module USB-A output | ESP32 USB port, via a spare cable | **powers the ESP32** — see §5 |
 | 5 | ESP32 `GND` | `a`(GND row) → **LEFT −** rail | one ground for the whole board |
 | 6 | ESP32 `3V3` | `a`(3V3 row) → **RIGHT +** rail | makes the right rail the 3.3 V rail |
 
@@ -175,7 +175,8 @@ connections are identical, so nothing here has to be rethought.
    the ESP32 is powered and its `3V3` pin is jumpered across.
 2. **Meter the switch**: on in one position, open in the other, and confirm the lever direction you
    want to mean "on".
-3. **Check the MB102 right jumper is OFF** so it is not driving the 3.3 V rail.
+3. **Check the jumper feeding the 3.3 V rail is OFF** so the module is not driving it against
+   the ESP32 regulator. Which jumper that is, you established by metering in step 1.
 4. Only then plug the probes and LCD in.
 
 ## 5. Powering the ESP32 without reaching VIN
@@ -183,7 +184,7 @@ connections are identical, so nothing here has to be rethought.
 The DevKit's `VIN` is on the header the board covers, so it cannot be reached on a single
 breadboard. Two ways round it:
 
-**Use the MB102's USB-A output** (most modules have one). A spare USB cable from that socket to the
+**Use the module's USB-A output**, which ours has. A spare USB cable from that socket to the
 ESP32's own USB port powers it at 5 V through the normal path. No `VIN` needed, one breadboard, and
 the switch still kills everything because it is upstream of the module.
 
@@ -201,7 +202,8 @@ redesign:
 - Breadboard becomes perfboard; every joint soldered.
 - Tactile buttons become panel-mount buttons; same two wires each.
 - The probe leads terminate in GX12 panel connectors instead of running to the board directly.
-- The LCD is already on wires, so it just moves to the panel cutout.
+- The LCD moves from the breadboard to flying leads and a panel cutout. Pin for pin the
+  connections are identical, so it is a re-termination rather than a redesign.
 - The switch is already off-board on wires, so it just moves to the panel.
-- The MB102 either mounts inside on standoffs, or is replaced by the 18650 + boost if runtime
-  becomes a problem.
+- The supply module either mounts inside on standoffs, or is replaced by the 18650 + boost if
+  runtime becomes a problem.
