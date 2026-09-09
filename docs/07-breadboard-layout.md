@@ -40,7 +40,7 @@ row 30/32 button 2        (straddles the channel)
 
 row 35    contrast divider (two fixed resistors, no pot)
 
-row 40-55 LCD             (see the note below - wires, not plugged in)
+row 37-52 LCD             (column i, body overhanging the right edge)
 
 row 60-65 MB102 module    (clips onto the rails, spans the board)
 
@@ -120,29 +120,39 @@ change only the lower resistor: **1.5 kΩ** raises `V0` to 0.65 V (lighter), **6
 Tying `V0` straight to ground also works on some modules, but at 5 V it asks for maximum contrast
 and usually fills the screen with solid blocks. The divider is two parts and no guesswork.
 
-### LCD — 16 pins
+### LCD — 16 pins in column `i`, rows 37–52
 
-| LCD pin | Label | To |
-|---|---|---|
-| 1 | `VSS` | LEFT `−` rail |
-| 2 | `VDD` | LEFT `+` rail (5 V) |
-| 3 | `V0` | `c35`, the divider midpoint |
-| 4 | `RS` | `a`(D23 row) |
-| 5 | `RW` | LEFT `−` rail — **mandatory** |
-| 6 | `E` | `a`(D22 row) |
-| 7–10 | `D0`–`D3` | nothing (4-bit mode) |
-| 11 | `D4` | `a`(D21 row) |
-| 12 | `D5` | `a`(TX2 / D17 row) |
-| 13 | `D6` | `a`(RX2 / D16 row) |
-| 14 | `D7` | `a`(D15 row) |
-| 15 | `A` | 220 Ω → LEFT `+` rail (5 V) |
-| 16 | `K` | LEFT `−` rail |
+Seated in column `i` with the **body overhanging the right edge of the board**. That is what makes
+plugging it in workable at all: the module is about 36 mm deep, so if it overhung to the left it
+would bury every hole in these rows. Overhanging right, it covers only column `j` and the right
+rail across rows 37–52 — neither of which is needed there — and leaves `f`, `g`, `h` clear for
+every jumper.
 
-> **Do not plug the LCD into the breadboard.** Its body is about 36 mm deep, wider than the board's
-> whole terminal area, so plugging it in buries every hole in those rows underneath it. Connect it
-> with female-to-male jumpers and let it sit beside the board. That is also how it will be in the
-> finished box, where it is panel-mounted and wired — so doing it now means the wiring does not
-> change when the enclosure arrives.
+**Check which end is pin 1** on the silkscreen before seating it. This table assumes pin 1 at the
+top. If it is at the bottom, flip the table end for end: pin 1 at `i52`, pin 16 at `i37`. Getting it
+backwards puts 5 V where ground belongs.
+
+| LCD pin | Label | Hole | Wire from | To |
+|---|---|---|---|---|
+| 1 | `VSS` | `i37` | `f37` | LEFT `−` rail |
+| 2 | `VDD` | `i38` | `f38` | LEFT `+` rail (5 V) |
+| 3 | `V0` | `i39` | `f39` | `c35`, the divider midpoint |
+| 4 | `RS` | `i40` | `f40` | `a`(D23 row) |
+| 5 | `RW` | `i41` | `f41` | LEFT `−` rail — **mandatory** |
+| 6 | `E` | `i42` | `f42` | `a`(D22 row) |
+| 7–10 | `D0`–`D3` | `i43`–`i46` | — | nothing — this is what makes it 4-bit mode |
+| 11 | `D4` | `i47` | `f47` | `a`(D21 row) |
+| 12 | `D5` | `i48` | `f48` | `a`(TX2 / D17 row) |
+| 13 | `D6` | `i49` | `f49` | `a`(RX2 / D16 row) |
+| 14 | `D7` | `i50` | `f50` | `a`(D15 row) |
+| 15 | `A` | `i51` | 220 Ω from `h51` to `d51` | `c51` → LEFT `+` rail |
+| 16 | `K` | `i52` | `f52` | LEFT `−` rail |
+
+The backlight resistor straddles the centre channel — `h51` to `d51` — because resistor leads reach
+across the 0.3 in gap but nowhere near the rail. A jumper covers the rest of the distance.
+
+In the finished box the LCD is panel-mounted on flying leads instead, but the pin-for-pin
+connections are identical, so nothing here has to be rethought.
 
 ## 4. Verify before applying power
 
