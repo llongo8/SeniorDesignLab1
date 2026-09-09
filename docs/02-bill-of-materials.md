@@ -31,7 +31,8 @@ Remember the lab rules: equipment and supplies stay in the lab unless an instruc
 | ✔ | Qty | Item | Why | Est. |
 |---|---|---|---|---|
 | 🛒 | 1 | **Second breadboard**, 830 or 400 point | The blocker. A DevKit is wider than its own pin span, so on one board its body covers every hole but one column and **only one of its two headers can be reached**. `VIN` and `EN` are both on the unreachable side, and requirement 3 needs to switch the box's power input. Butt two boards together and let the module straddle the join. Female-to-male jumpers also work if the kit has any. | $5 |
-| 🛒 | 1 | **5 V power source** — pick one: | | |
+| ✅ | 1 | **5 V power source: MB102 module + 9 V battery** — chosen 2026-09-09 | The module came with the REXQualis kit and the 9 V clip plugs straight into its barrel jack, so this costs nothing. See [the power tree](#power-tree-mb102--9-v) for the jumper setting and what must *not* be connected. Alternatives kept below in case runtime becomes a problem. | $0 |
+| | | *alternatives, not chosen:* | | |
 | | | *(a)* USB power bank + USB-A breakout board | Cheapest; most of us own the bank. ~12 h from 5000 mAh. Test early — some banks cut out below 50–100 mA. | $3 |
 | | | *(b)* 18650 + holder + TP4056 + MT3608 boost | What this BOM specifies. ~7 h, recharges in place, reads better in the report than a power bank cable-tied inside a box. Protected cells only. | $14 |
 | | | *(c)* 9 V battery + MB102 module **or** LM2596 buck | Uses the 9 V clip already in the kit. Check for an MB102 before buying — REXQualis kits often include one and it takes the barrel plug directly. Only ~2 h of runtime, which is enough for a checkoff demo. | $0–2 |
@@ -178,6 +179,47 @@ otherwise free.
 > supply or leaves the lamp permanently lit. If the switch has a window, a coloured lens or an
 > internal LED, look up its part number before wiring it. The continuity test above distinguishes
 > them: a true SPDT has one pin common to both lever positions, an illuminated SPST does not.
+
+### Power tree: MB102 + 9 V
+
+```
+  9 V battery ──[ SPDT switch ]──► MB102 barrel jack
+                                        │
+                                   MB102 rail, jumper set to 5 V
+                                        │
+                        ┌───────────────┴───────────────┐
+                        ▼                               ▼
+                   ESP32 VIN                  LCD VDD (pin 2)
+                        │                     LCD backlight (pin 15 via 220 ohm)
+                        │                     contrast pot, high end
+                        ▼
+              ESP32 3V3 pin (output)
+                        │
+                        ├──► DS18B20 VDD x2
+                        └──► 4.7k pull-ups x2
+
+  One ground, shared by everything: MB102, ESP32, LCD VSS and K, both probes.
+```
+
+Three things to get right:
+
+**Set the jumper to 5 V.** Each MB102 rail has a 3-pin header selecting 3.3 V / off / 5 V, and it
+does not always ship on 5 V. Meter the rail before connecting anything to it.
+
+**Do not use the MB102 3.3 V output.** Our 3.3 V comes from the ESP32 own regulator, via the `3V3`
+pin. Feeding the module 3.3 V onto the same node would put two regulators in parallel, fighting
+over a rail neither of them controls.
+
+**Do not power from USB and the MB102 at once.** Both reach the same regulator input on the DevKit.
+Use USB alone for bench work with the serial monitor, and the battery alone for the demo.
+
+The module regulates linearly, so at 9 V in and our ~200 mA it dissipates about `(9 - 5) x 0.2 =
+0.8 W` and gets noticeably warm. That is within what the part manages but not comfortably, and it is
+why runtime is closer to 1.5 h than the 2 h the battery capacity alone suggests. If the ESP32
+resets when the WiFi transmits, that is the rail sagging under a current spike rather than a
+firmware fault -- add a 100-470 uF electrolytic across the 5 V rail.
+
+Removing the **Arduino Uno** is part of this change: it was only ever standing in as a 5 V source.
 
 ### The rail must be 5 V, however it is generated
 
