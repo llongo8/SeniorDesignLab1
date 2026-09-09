@@ -160,20 +160,34 @@ Same pattern, its own resistor.
 
 ## Step 6 — Buttons
 
-Push each button in so it **straddles the gap**. Legs land in rows 25 and 27, then 30 and 32.
+**Find the switching pair before you fit them.** A 4-leg tactile switch is two pairs already joined
+inside the part, and which legs pair up depends on the footprint — some straddle the breadboard's
+centre gap, some are too narrow and sit entirely on one side. Do not assume:
+
+1. Hold the button in your fingers, meter on continuity.
+2. Probe pairs of legs until you find one that is **silent at rest and beeps only when pressed**.
+3. Note where those two legs sit.
+
+Those two are the switch. Any other pair is either permanently joined or permanently open.
+
+Now seat the button around row 25, and the second around row 30, so that **the two legs you found
+land in different rows**. Then wire those two rows — the exact holes depend on your button, so read
+them off the board:
 
 | # | Wire from | To |
 |---|---|---|
-| 13 | `d25` | `a` + `D18` row |
-| 14 | `g25` | GND rail |
-| 15 | `d30` | `a` + `D19` row |
-| 16 | `g30` | GND rail |
+| 13 | button 1, one switching leg | `a` + `D18` row |
+| 14 | button 1, other switching leg | GND rail |
+| 15 | button 2, one switching leg | `a` + `D19` row |
+| 16 | button 2, other switching leg | GND rail |
 
 **Check:** serial shows `btn HH` when you're not touching anything. Hold button 1 → `LH`. Hold
 button 2 → `HL`.
 
-> One wire each side of the gap. Both on the same side ties the pin to ground permanently and the
-> button does nothing — that's the `L`-at-rest fault.
+> Two failure modes look identical on the LCD, and the pin levels separate them. An **`L` at rest**
+> means both wires are on legs that are already joined inside the part — the pin is tied to ground
+> permanently. **`H` that never changes** when pressed means the opposite: the two legs are never
+> joined to each other, so the pin floats high forever. Both are wiring, not firmware.
 
 ---
 
