@@ -59,14 +59,31 @@ Nothing on the board but the supply module.
 1. Clip the module onto the rails at the **bottom** of the board.
 2. Plug the 9 V battery into its barrel jack. **Straight in — no switch yet.**
 3. Press the module's white button. The green LED comes on.
-4. Set **one** jumper to `5V` and the **other** to `OFF`.
+4. Set the jumpers — see below.
+
+**The module has two jumper headers, one per rail.** They are independent, not alternatives. Each
+has three pins, and the jumper block bridges two adjacent pins:
+
+```
+[5V]  [middle]  [3.3]
+  └──────┘             jumper here  =  5 V out
+         └───────┘     jumper here  =  3.3 V out
+  (jumper removed)     =  OFF
+```
+
+**`OFF` is not a position you slide to — it is the jumper taken off.** The silkscreen does not make
+that obvious.
+
+- On **one** header: jumper on the two pins at the `5V` end.
+- On the **other**: pull the jumper off. Park it on a single pin so it cannot be lost; hanging on
+  one pin it bridges nothing.
 
 **Check:** meter each `+` rail against a `−` rail. One reads **5 V**, the other reads **0**.
 
 Tape-label the 5 V one. The other is your 3V3 rail — the module leaves it alone, and the ESP32 will
 feed it in step 3.
 
-> Both rails reading 5 V means both jumpers are on `5V`. Move one to `OFF`.
+> Both rails reading 5 V means both jumpers are still fitted. Remove one.
 
 ---
 
@@ -74,15 +91,20 @@ feed it in step 3.
 
 The switch sits off the board. Only its wires reach it.
 
+Ours is marked **`ON  ON`** on the side — a 2-position on-on toggle, rated 2 A at 250 V against our
+250 mA. Its three pins are **in a line**, and on that footprint the **middle pin is the common**.
+
 1. Cut the **red** wire of the battery clip.
-2. Battery side of the cut → switch **outer terminal**.
-3. Module side of the cut → switch **middle terminal**.
+2. Battery side of the cut → either **outer** pin.
+3. Module side of the cut → **middle** pin.
+4. Third pin: leave empty. Insulate or trim it — loose lugs move during a drop test.
 
-**Check:** flip the lever. Green LED on in one position, off in the other. Note which position is
-"on" — the panel label has to match later.
+**Check:** meter on continuity, middle to the outer pin you used. It should beep in one lever
+position and not the other. Choose the outer pin that conducts with the lever **up**, so up means
+on. Then reconnect and confirm the green LED follows the lever.
 
-> Battery to an *outer* terminal, module to the *middle*. The other way round leaves the battery
-> live on a bare lug whenever the box is off.
+> Battery to an *outer* pin, module to the *middle*. The other way round leaves the battery live on
+> a bare lug whenever the box is off.
 
 ---
 
