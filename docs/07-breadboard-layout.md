@@ -19,10 +19,24 @@ column-then-row, so `a18` is column a, row 18.
 | **RIGHT `+`** | 3.3 V | **ESP32 `3V3` pin**, not the module | both probes, both 4.7 kΩ pull-ups |
 | **RIGHT `−`** | ground | MB102 (both `−` rails are common through the module) | everything |
 
-> **Set the MB102's RIGHT jumper to OFF.** The right `+` rail is driven by the ESP32's own regulator.
-> If the module also drives it, two regulators fight over a rail neither controls. The left jumper
-> goes to 5 V. Meter both rails before connecting anything — the jumpers do not always ship where
-> you expect.
+> **Set the module's jumper for the 3.3 V rail to OFF.** That rail is driven by the ESP32's own
+> regulator; if the module drives it too, two regulators fight over a rail neither controls. The
+> other jumper goes to 5 V.
+
+Ours is an **HW-131**, the same design as an MB102. Worth knowing about it:
+
+- Two 3-pin jumpers, each labelled `5V / OFF / 3.3`, one per rail pair. **Which jumper feeds which
+  rail depends on how the module is seated**, so do not guess — set them differently, meter both
+  rails, and note which is which. Thirty seconds, and it removes a whole class of confusion.
+- It carries a **USB-A output socket**. A spare cable from there to the ESP32's own USB port is how
+  we power the board without needing `VIN`, which is on the header a single breadboard cannot reach.
+- It has its **own white power button**, which is not the requirement 3 switch and cannot be panel
+  mounted. Leave it on. Remember it exists: "dead board with the battery connected" is usually
+  nothing more than this button.
+- A green LED lights when the module is powered, which is the quickest check that the battery,
+  switch and barrel plug are all doing their job.
+- There are extra `3.3V / 5V / GND` header pins in the middle, useful for tapping 5 V without
+  going through a rail.
 
 ## 2. Where each part sits
 
