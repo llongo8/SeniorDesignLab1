@@ -1,209 +1,255 @@
-# Tidy Breadboard Layout
+# Breadboard Build
 
-The organised version of the prototype: HW-131 supply module on a 9 V battery, panel switch in the battery
-line, everything on one 830-point board. Build from [the staged guide](06-breadboard-wiring.md)
-first if nothing is wired yet — this is about *placement*, not about bringing subsystems up.
+Follow this top to bottom with the board in front of you. Eight steps, each small enough to check
+before moving on. If a check fails, the fault is in the step you just did — you don't have to hunt.
 
-Board convention used throughout: columns **a b c d e** | channel | **f g h i j**, a `+` and `−`
-rail down each outside edge, rows numbered **1 at the top to 65 at the bottom**. A hole is written
-column-then-row, so `a18` is column a, row 18.
+All the reasoning is at the end, in [Why it's built this way](#why-its-built-this-way). Skip it
+while you're wiring.
 
 ---
 
-## 1. Two supply rails, and which is which
+## Before you start
 
-| Rail | Voltage | Source | Feeds |
-|---|---|---|---|
-| **LEFT `+`** | 5 V | supply module, its jumper on **5 V** | LCD `VDD`, LCD backlight, contrast divider |
-| **LEFT `−`** | ground | supply module | everything |
-| **RIGHT `+`** | 3.3 V | **ESP32 `3V3` pin**, not the module | both probes, both 4.7 kΩ pull-ups |
-| **RIGHT `−`** | ground | supply module (both `−` rails are common through it) | everything |
+**Write down where your ESP32 pins are.** Every board lays them out differently, so read the labels
+printed on your module and fill this in. The whole build refers back to it.
 
-> **Set the module's jumper for the 3.3 V rail to OFF.** That rail is driven by the ESP32's own
-> regulator; if the module drives it too, two regulators fight over a rail neither controls. The
-> other jumper goes to 5 V.
+| ESP32 pin | Row it's in |
+|---|---|
+| `3V3` | |
+| `GND` | |
+| `D4` | |
+| `D5` | |
+| `D15` | |
+| `RX2` (D16) | |
+| `TX2` (D17) | |
+| `D18` | |
+| `D19` | |
+| `D21` | |
+| `D22` | |
+| `D23` | |
 
-Ours is an **HW-131**, the same design as an MB102. Worth knowing about it:
+**How holes are written.** `a18` means column a, row 18. Columns run `a b c d e` — gap — `f g h i j`
+left to right. Rows run 1 at the top to 65 at the bottom.
 
-- Two 3-pin jumpers, each labelled `5V / OFF / 3.3`, one per rail pair. **Which jumper feeds which
-  rail depends on how the module is seated**, so do not guess — set them differently, meter both
-  rails, and note which is which. Thirty seconds, and it removes a whole class of confusion.
-- It carries a **USB-A output socket**. A spare cable from there to the ESP32's own USB port is how
-  we power the board without needing `VIN`, which is on the header a single breadboard cannot reach.
-- It has its **own white power button**, which is not the requirement 3 switch and cannot be panel
-  mounted. Leave it on. Remember it exists: "dead board with the battery connected" is usually
-  nothing more than this button.
-- A green LED lights when the module is powered, which is the quickest check that the battery,
-  switch and barrel plug are all doing their job.
-- There are extra `3.3V / 5V / GND` header pins in the middle, useful for tapping 5 V without
-  going through a rail.
+**Three rails, by name.** Put tape on each and label it. From here on the steps say "5V rail", never
+"left rail", so it doesn't matter which physical side each ends up on.
 
-## 2. Where each part sits
+- **5V rail** — one `+` rail, fed by the supply module
+- **3V3 rail** — the other `+` rail, fed by the ESP32 itself
+- **GND rail** — either `−` rail; both are joined through the module
+
+**What goes where:**
 
 ```
-row  1 ┬───────────────────────────────┐
-       │  ESP32 DevKit                 │   pins in column b (left) and j (right)
-       │  straddling the channel       │   the body covers c-i, so column a is the
-row 15 ┴───────────────────────────────┘   only place to land an ESP32 wire
-
-row 18    sensor 1 data + its 4.7k
-row 21    sensor 2 data + its 4.7k
-
-row 25/27 button 1        (straddles the channel)
-row 30/32 button 2        (straddles the channel)
-
-row 35    contrast divider (two fixed resistors, no pot)
-
-row 37-52 LCD             (column i, body overhanging the right edge)
-
-row 60-65 supply module   (clips onto the rails, spans the board)
-
-off-board  SPDT switch, wires only, in the battery + line
+rows  1-15   ESP32
+rows 18, 21  temperature probes
+rows 25-32   buttons
+row  35      contrast resistors
+rows 37-52   LCD
+rows 60-65   supply module
+off-board    switch (only its wires touch the board)
 ```
 
-**Leave a clear row between blocks.** It costs nothing on a 65-row board and it makes a misplaced
-wire visible instead of hidden.
+---
 
-## 3. Connection table
+## Step 1 — Power rails
 
-ESP32 pins are written as **`a` + the row that pin sits in** — read the row off your own board,
-since pin order differs between DevKit variants. Everything else is an exact hole.
+Nothing on the board but the supply module.
 
-### Power in
+1. Clip the module onto the rails at the **bottom** of the board.
+2. Plug the 9 V battery into its barrel jack. **Straight in — no switch yet.**
+3. Press the module's white button. The green LED comes on.
+4. Set **one** jumper to `5V` and the **other** to `OFF`.
 
-| # | From | To | Note |
+**Check:** meter each `+` rail against a `−` rail. One reads **5 V**, the other reads **0**.
+
+Tape-label the 5 V one. The other is your 3V3 rail — the module leaves it alone, and the ESP32 will
+feed it in step 3.
+
+> Both rails reading 5 V means both jumpers are on `5V`. Move one to `OFF`.
+
+---
+
+## Step 2 — Switch
+
+The switch sits off the board. Only its wires reach it.
+
+1. Cut the **red** wire of the battery clip.
+2. Battery side of the cut → switch **outer terminal**.
+3. Module side of the cut → switch **middle terminal**.
+
+**Check:** flip the lever. Green LED on in one position, off in the other. Note which position is
+"on" — the panel label has to match later.
+
+> Battery to an *outer* terminal, module to the *middle*. The other way round leaves the battery
+> live on a bare lug whenever the box is off.
+
+---
+
+## Step 3 — ESP32
+
+1. Push the ESP32 in at the top, rows 1–15, straddling the gap. Column `a` stays free.
+2. Unplug the battery. Power the ESP32 from your **laptop USB** for now.
+
+| # | Wire from | To |
+|---|---|---|
+| 1 | `a` + `GND` row | GND rail |
+| 2 | `a` + `3V3` row | 3V3 rail |
+
+**Check:** the 3V3 rail now reads **3.3 V**, and serial shows the boot banner.
+
+```powershell
+python -m platformio device monitor -d firmware
+```
+
+---
+
+## Step 4 — Probe 1 (row 18)
+
+| # | Wire from | To |
+|---|---|---|
+| 3 | probe 1 **red** | 3V3 rail |
+| 4 | probe 1 **black** | GND rail |
+| 5 | probe 1 **yellow** | `a18` |
+| 6 | `b18` | 3V3 rail — **through the 4.7 kΩ** |
+| 7 | `c18` | `a` + `D4` row |
+
+**Check:** serial says `[1wire] sensor 1: found`.
+
+> `absent` means wire 6. Without that resistor the probe can never be seen.
+
+---
+
+## Step 5 — Probe 2 (row 21)
+
+Same pattern, its own resistor.
+
+| # | Wire from | To |
+|---|---|---|
+| 8 | probe 2 **red** | 3V3 rail |
+| 9 | probe 2 **black** | GND rail |
+| 10 | probe 2 **yellow** | `a21` |
+| 11 | `b21` | 3V3 rail — **through the second 4.7 kΩ** |
+| 12 | `c21` | `a` + `D5` row |
+
+**Check:** serial says `sensor 2: found`, and `[temp]` lines show two readings.
+
+---
+
+## Step 6 — Buttons
+
+Push each button in so it **straddles the gap**. Legs land in rows 25 and 27, then 30 and 32.
+
+| # | Wire from | To |
+|---|---|---|
+| 13 | `d25` | `a` + `D18` row |
+| 14 | `g25` | GND rail |
+| 15 | `d30` | `a` + `D19` row |
+| 16 | `g30` | GND rail |
+
+**Check:** serial shows `btn HH` when you're not touching anything. Hold button 1 → `LH`. Hold
+button 2 → `HL`.
+
+> One wire each side of the gap. Both on the same side ties the pin to ground permanently and the
+> button does nothing — that's the `L`-at-rest fault.
+
+---
+
+## Step 7 — Contrast resistors (row 35)
+
+Two resistors, no potentiometer.
+
+| # | Wire from | To |
+|---|---|---|
+| 17 | `a35` | 5V rail — **through the 10 kΩ** |
+| 18 | `b35` | GND rail — **through the 1 kΩ** |
+
+**Check:** meter `c35` against GND. You want about **0.45 V**.
+
+> Too dark or too faint later? Change only the 1 kΩ. Bigger (1.5 kΩ) → lighter. Smaller (680 Ω) →
+> darker.
+
+---
+
+## Step 8 — LCD (rows 37–52)
+
+**Find pin 1 first** — it's marked on the back of the LCD. Seat the module in **column `i`** with
+pin 1 at row 37, display body hanging off the **right edge** of the board.
+
+> If pin 1 is at the other end, flip the whole table: pin 1 at `i52`, pin 16 at `i37`. Backwards
+> puts 5 V where ground belongs.
+
+| # | LCD pin | Wire from | To |
 |---|---|---|---|
-| 1 | 9 V battery **+** (red) | switch **terminal A** | switch is off-board, wires only |
-| 2 | switch **common** | module barrel plug **centre** | battery feeds a throw, load off the common |
-| 3 | 9 V battery **−** (black) | module barrel plug **sleeve** | |
-| 4 | module USB-A output | ESP32 USB port, via a spare cable | **powers the ESP32** — see §5 |
-| 5 | ESP32 `GND` | `a`(GND row) → **LEFT −** rail | one ground for the whole board |
-| 6 | ESP32 `3V3` | `a`(3V3 row) → **RIGHT +** rail | makes the right rail the 3.3 V rail |
+| 19 | 1 `VSS` | `f37` | GND rail |
+| 20 | 2 `VDD` | `f38` | 5V rail |
+| 21 | 3 `V0` | `f39` | `c35` |
+| 22 | 4 `RS` | `f40` | `a` + `D23` row |
+| 23 | 5 `RW` | `f41` | GND rail |
+| 24 | 6 `E` | `f42` | `a` + `D22` row |
+| — | 7–10 | — | **leave empty** |
+| 25 | 11 `D4` | `f47` | `a` + `D21` row |
+| 26 | 12 `D5` | `f48` | `a` + `TX2` row |
+| 27 | 13 `D6` | `f49` | `a` + `RX2` row |
+| 28 | 14 `D7` | `f50` | `a` + `D15` row |
+| 29 | 15 `A` | `h51` → `d51` **through the 220 Ω** | then `c51` → 5V rail |
+| 30 | 16 `K` | `f52` | GND rail |
 
-### Sensor 1 — row 18
+**Check:** the LCD shows `Sensor 1 off` / `Sensor 2 off`. Press a button and that row becomes a
+temperature.
 
-| # | From | To |
-|---|---|---|
-| 7 | probe 1 **red** | RIGHT `+` rail (3.3 V) |
-| 8 | probe 1 **black** | LEFT `−` rail |
-| 9 | probe 1 **yellow** | `a18` |
-| 10 | 4.7 kΩ, one leg `b18` | other leg to RIGHT `+` rail |
-| 11 | `c18` | `a`(D4 row) |
+---
 
-### Sensor 2 — row 21
+## Done — now test on battery
 
-| # | From | To |
-|---|---|---|
-| 12 | probe 2 **red** | RIGHT `+` rail |
-| 13 | probe 2 **black** | LEFT `−` rail |
-| 14 | probe 2 **yellow** | `a21` |
-| 15 | 4.7 kΩ, one leg `b21` | other leg to RIGHT `+` rail |
-| 16 | `c21` | `a`(D5 row) |
+Unplug the laptop USB. Run a cable from the module's **USB-A socket** to the ESP32's USB port, then
+plug the battery back in.
 
-### Buttons — straddling the channel
+**Never both at once.** Laptop USB for flashing and serial; battery for the demo.
 
-Legs land in `e25 e27 f25 f27` and `e30 e32 f30 f32`.
+Flip the switch off: the LCD goes dark and the web page says "no data available". That's
+requirement 3 demonstrated.
 
-| # | From | To |
-|---|---|---|
-| 17 | `d25` | `a`(D18 row) |
-| 18 | `g25` | LEFT `−` rail |
-| 19 | `d30` | `a`(D19 row) |
-| 20 | `g30` | LEFT `−` rail |
+---
 
-> One wire each **side of the channel**. Both wires on the same side connects the GPIO straight to
-> ground through the switch's internal link — the fault that cost an evening. Serial prints
-> `btn HH` when both are correct; an `L` at rest is always a wiring error.
+## If something's wrong
 
-### Contrast — fixed divider, row 35
+| What you see | It's almost always |
+|---|---|
+| Probe says `absent` or `-127` | Its 4.7 kΩ — wire 6 or 11 |
+| Button does nothing, serial shows `L` at rest | Both button wires on the same side of the gap |
+| LCD dark and unlit | Backlight — wire 29, and it needs 5 V not 3.3 V |
+| LCD lit but blank | Contrast — meter `c35`, want 0.45 V |
+| LCD shows solid blocks | Contrast too high, or `RW` (wire 23) not grounded |
+| LCD shows garbage | `D4`–`D7` order — wires 25–28 go to `D21`, `TX2`, `RX2`, `D15` in that order |
+| Whole board dead on battery | The module's white button, or the switch is off |
+| Odd faults after moving wires | Both `−` rails must be joined; the module does this, but check |
 
-No pot. Contrast on an HD44780 is `VDD − V0`, and at `VDD` = 5 V the useful `V0` sits only a few
-tenths of a volt above ground — a narrow window a pot makes fiddly to hit and easy to knock out of
-adjustment. Two fixed resistors put it exactly where it belongs and cannot drift:
+---
 
-| # | From | To | Gives |
-|---|---|---|---|
-| 21 | **10 kΩ**, one leg `a35` | other leg to LEFT `+` rail (5 V) | |
-| 22 | **1 kΩ**, one leg `b35` | other leg to LEFT `−` rail | `V0` = 5 × 1/11 ≈ **0.45 V** |
-| 23 | `c35` | LCD `V0` (pin 3) | |
+## Why it's built this way
 
-All three share row 35, the divider's midpoint. If the display comes out too dark or too faint,
-change only the lower resistor: **1.5 kΩ** raises `V0` to 0.65 V (lighter), **680 Ω** drops it to
-0.32 V (darker).
+**Two voltages.** The LCD needs 5 V or its contrast and backlight don't work. The probes and the
+ESP32's pins run at 3.3 V. So the module supplies 5 V, and the ESP32's own regulator supplies 3.3 V
+out of its `3V3` pin. That's why one module jumper is set to `OFF` — if the module also drove the
+3.3 V rail, two regulators would fight over it.
 
-Tying `V0` straight to ground also works on some modules, but at 5 V it asks for maximum contrast
-and usually fills the screen with solid blocks. The divider is two parts and no guesswork.
+**The 4.7 kΩ resistors aren't optional.** A DS18B20 can only pull its data line *low*. The resistor
+pulls it back high. Without one the line never moves and the probe is invisible. One per probe,
+because each has its own bus — which is how the firmware can tell you *which* probe was unplugged.
 
-### LCD — 16 pins in column `i`, rows 37–52
+**The buttons have no resistors** because the ESP32 has built-in pull-ups, switched on in firmware.
+Adding your own would fight them.
 
-Seated in column `i` with the **body overhanging the right edge of the board**. That is what makes
-plugging it in workable at all: the module is about 36 mm deep, so if it overhung to the left it
-would bury every hole in these rows. Overhanging right, it covers only column `j` and the right
-rail across rows 37–52 — neither of which is needed there — and leaves `f`, `g`, `h` clear for
-every jumper.
+**Contrast is two fixed resistors, not a pot.** At 5 V the usable range is a few tenths of a volt
+wide — hard to hit with a pot, easy to knock out of adjustment, and one more thing to work loose
+when the box gets dropped.
 
-**Check which end is pin 1** on the silkscreen before seating it. This table assumes pin 1 at the
-top. If it is at the bottom, flip the table end for end: pin 1 at `i52`, pin 16 at `i37`. Getting it
-backwards puts 5 V where ground belongs.
+**The LCD overhangs right** because the display is deeper than the board is wide. Overhanging left
+would bury every hole in those rows underneath it.
 
-| LCD pin | Label | Hole | Wire from | To |
-|---|---|---|---|---|
-| 1 | `VSS` | `i37` | `f37` | LEFT `−` rail |
-| 2 | `VDD` | `i38` | `f38` | LEFT `+` rail (5 V) |
-| 3 | `V0` | `i39` | `f39` | `c35`, the divider midpoint |
-| 4 | `RS` | `i40` | `f40` | `a`(D23 row) |
-| 5 | `RW` | `i41` | `f41` | LEFT `−` rail — **mandatory** |
-| 6 | `E` | `i42` | `f42` | `a`(D22 row) |
-| 7–10 | `D0`–`D3` | `i43`–`i46` | — | nothing — this is what makes it 4-bit mode |
-| 11 | `D4` | `i47` | `f47` | `a`(D21 row) |
-| 12 | `D5` | `i48` | `f48` | `a`(TX2 / D17 row) |
-| 13 | `D6` | `i49` | `f49` | `a`(RX2 / D16 row) |
-| 14 | `D7` | `i50` | `f50` | `a`(D15 row) |
-| 15 | `A` | `i51` | 220 Ω from `h51` to `d51` | `c51` → LEFT `+` rail |
-| 16 | `K` | `i52` | `f52` | LEFT `−` rail |
+**The ESP32 is powered through its USB socket**, not its `VIN` pin, because `VIN` is on the header
+the module's body covers. The switch still kills everything, since it's upstream of the supply.
 
-The backlight resistor straddles the centre channel — `h51` to `d51` — because resistor leads reach
-across the 0.3 in gap but nowhere near the rail. A jumper covers the rest of the distance.
-
-In the finished box the LCD is panel-mounted on flying leads instead, but the pin-for-pin
-connections are identical, so nothing here has to be rethought.
-
-## 4. Verify before applying power
-
-1. **Meter the rails with the battery connected and the switch on**, before any component is in.
-   Left `+` to left `−` should read 5 V. Right `+` should read nothing yet — it only comes alive once
-   the ESP32 is powered and its `3V3` pin is jumpered across.
-2. **Meter the switch**: on in one position, open in the other, and confirm the lever direction you
-   want to mean "on".
-3. **Check the jumper feeding the 3.3 V rail is OFF** so the module is not driving it against
-   the ESP32 regulator. Which jumper that is, you established by metering in step 1.
-4. Only then plug the probes and LCD in.
-
-## 5. Powering the ESP32 without reaching VIN
-
-The DevKit's `VIN` is on the header the board covers, so it cannot be reached on a single
-breadboard. Two ways round it:
-
-**Use the module's USB-A output**, which ours has. A spare USB cable from that socket to the
-ESP32's own USB port powers it at 5 V through the normal path. No `VIN` needed, one breadboard, and
-the switch still kills everything because it is upstream of the module.
-
-**Or reach `VIN` directly** with a second breadboard butted against the first so the module straddles
-the join, or with female-to-male jumpers onto the far header. Then LEFT `+` (5 V) goes to `VIN`.
-
-Either way: **never power from the laptop USB and the battery at the same time.** Both arrive at the
-same regulator input. USB alone for flashing and serial, battery alone for the demo.
-
-## 6. What changes for the soldered build
-
-This layout is deliberately close to the final wiring so the transition is mechanical, not a
-redesign:
-
-- Breadboard becomes perfboard; every joint soldered.
-- Tactile buttons become panel-mount buttons; same two wires each.
-- The probe leads terminate in GX12 panel connectors instead of running to the board directly.
-- The LCD moves from the breadboard to flying leads and a panel cutout. Pin for pin the
-  connections are identical, so it is a re-termination rather than a redesign.
-- The switch is already off-board on wires, so it just moves to the panel.
-- The supply module either mounts inside on standoffs, or is replaced by the 18650 + boost if
-  runtime becomes a problem.
+**Only the switch's wires touch the board.** It gets panel-mounted in the finished box, so wiring it
+on flying leads now means nothing changes later.
