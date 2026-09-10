@@ -7,7 +7,7 @@ import logging
 import smtplib
 import time
 from email.message import EmailMessage
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 from .config import settings
 from .settings_store import AlertSettings
@@ -38,6 +38,9 @@ class AlertEngine:
         self._last_sent: Dict[int, float] = {}
         self.last_error: Optional[str] = None
         self.sent_count = 0
+        # Strong references to in-flight sends. Without this the event loop only
+        # holds a weak reference and a task can be collected mid-send.
+        self._pending: Set[asyncio.Task] = set()
 
     def _next_zone(self, sensor_id: int, temp_c: float, cfg: AlertSettings) -> str:
         previous = self._zone.get(sensor_id, ZONE_OK)
@@ -88,7 +91,16 @@ class AlertEngine:
         )
 
         self._last_sent[sensor_id] = now
-        await self.send(destinations, "Thermometer alert", body)
+
+        # Fire and forget, deliberately. An SMTP exchange -- connect, STARTTLS,
+        # log in, send -- takes seconds, and evaluate() is awaited from inside
+        # the 1 Hz poll loop. Awaiting the send here stops polling for the whole
+        # exchange: the box goes unread, and the graph grows a gap for an outage
+        # that never happened. The alert is not urgent to the millisecond; the
+        # sampling cadence is.
+        task = asyncio.create_task(self.send(destinations, "Thermometer alert", body))
+        self._pending.add(task)
+        task.add_done_callback(self._pending.discard)
 
     async def send(self, recipients: List[str], subject: str, body: str) -> List[str]:
         """Send to every destination, returning the ones that failed.
@@ -102,30 +114,50 @@ class AlertEngine:
             log.warning(self.last_error)
             return list(recipients)
 
-        failures: List[str] = []
-        errors: List[str] = []
-        for recipient in recipients:
-            try:
-                await asyncio.to_thread(self._send_blocking, recipient, subject, body)
-                self.sent_count += 1
-                log.info("alert sent to %s: %s", recipient, body)
-            except Exception as exc:  # noqa: BLE001 -- surfaced to the UI, never fatal
-                failures.append(recipient)
-                errors.append(f"{recipient}: {type(exc).__name__}: {exc}")
-                log.error("alert send to %s failed: %s", recipient, exc)
+        try:
+            failures, errors = await asyncio.to_thread(
+                self._send_blocking_many, list(recipients), subject, body
+            )
+        except Exception as exc:  # noqa: BLE001 -- connect or login failed
+            self.last_error = f"{type(exc).__name__}: {exc}"
+            log.error("alert send failed before any recipient: %s", self.last_error)
+            return list(recipients)
 
+        self.sent_count += len(recipients) - len(failures)
         self.last_error = "; ".join(errors) if errors else None
+        for recipient in recipients:
+            if recipient not in failures:
+                log.info("alert sent to %s: %s", recipient, body)
         return failures
 
     @staticmethod
-    def _send_blocking(recipient: str, subject: str, body: str) -> None:
-        msg = EmailMessage()
-        msg["From"] = settings.alert_from or settings.smtp_user
-        msg["To"] = recipient
-        msg["Subject"] = subject
-        msg.set_content(body)
+    def _send_blocking_many(
+        recipients: List[str], subject: str, body: str
+    ) -> tuple[List[str], List[str]]:
+        """One connection for every destination, not one each.
+
+        Connecting, negotiating TLS and authenticating costs far more than the
+        message itself, so doing it per recipient doubled the time we spent
+        blocked and doubled the login burst Gmail sees. A failure on one
+        recipient still leaves the others alone.
+        """
+        failures: List[str] = []
+        errors: List[str] = []
 
         with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15) as smtp:
             smtp.starttls()
             smtp.login(settings.smtp_user, settings.smtp_password)
-            smtp.send_message(msg)
+
+            for recipient in recipients:
+                try:
+                    msg = EmailMessage()
+                    msg["From"] = settings.alert_from or settings.smtp_user
+                    msg["To"] = recipient
+                    msg["Subject"] = subject
+                    msg.set_content(body)
+                    smtp.send_message(msg)
+                except Exception as exc:  # noqa: BLE001 -- one bad address only
+                    failures.append(recipient)
+                    errors.append(f"{recipient}: {type(exc).__name__}: {exc}")
+
+        return failures, errors
