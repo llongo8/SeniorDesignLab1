@@ -240,8 +240,21 @@ like a dead backlight: dark, and unaffected by changing the resistor.
 modules reverse it, and a few bring the backlight out on separate `A`/`K` pads at the corner of the
 PCB rather than through pins 15 and 16 at all — worth knowing before concluding the LED is dead.
 
-**100 Ω, not 220 Ω.** At 5 V a blue backlight drops about 3.2 V, so 220 Ω passes only 8 mA where it
-wants 15–20. 100 Ω gives 18 mA. Two 220 Ω in parallel make 110 Ω if that is what is to hand.
+**Start at 220 Ω and adjust by eye.** The arithmetic — 5 V less a 3.2 V LED drop over 220 Ω, so
+8 mA — predicts something dim, and on our module 220 Ω is comfortably bright. The prediction assumes
+no series resistor on the module and a particular forward voltage, and both vary. Trust the screen,
+not the sum.
+
+| Resistor | Brightness |
+|---|---|
+| 100 Ω | brighter |
+| **220 Ω** | our starting point, already bright |
+| 330 Ω | slightly dimmer |
+| 470 Ω, or two 220 Ω in series | noticeably dimmer |
+| 1 kΩ | much dimmer |
+
+Perceived brightness does not track current linearly, so doubling the resistance drops the apparent
+brightness by rather less than half. Expect changes to feel subtler than the numbers look.
 
 **Check:** the LCD shows `Sensor 1 off` / `Sensor 2 off`, clearly lit. Press a button and that row
 becomes a temperature.
