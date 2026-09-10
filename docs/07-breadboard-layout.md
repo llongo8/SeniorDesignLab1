@@ -228,11 +228,23 @@ pin 1 at row 37, display body hanging off the **right edge** of the board.
 | 26 | 12 `D5` | `f48` | `a` + `TX2` row |
 | 27 | 13 `D6` | `f49` | `a` + `RX2` row |
 | 28 | 14 `D7` | `f50` | `a` + `D15` row |
-| 29 | 15 `A` | `h51` → `d51` **through the 220 Ω** | then `c51` → 5V rail |
+| 29 | 15 `A` | one leg of the **100 Ω** in `f51` | other leg **straight to the 5V rail** |
 | 30 | 16 `K` | `f52` | GND rail |
 
-**Check:** the LCD shows `Sensor 1 off` / `Sensor 2 off`. Press a button and that row becomes a
-temperature.
+**Wire the backlight as two direct connections**, sharing no holes with anything else — resistor
+from the 5V rail into pin 15's row, jumper from pin 16's row to GND. Routing it through intermediate
+holes gives the path extra places to land one row off, and a broken backlight path looks exactly
+like a dead backlight: dark, and unaffected by changing the resistor.
+
+**Polarity on our module is the standard one:** pin 15 is the anode, pin 16 the cathode. Some
+modules reverse it, and a few bring the backlight out on separate `A`/`K` pads at the corner of the
+PCB rather than through pins 15 and 16 at all — worth knowing before concluding the LED is dead.
+
+**100 Ω, not 220 Ω.** At 5 V a blue backlight drops about 3.2 V, so 220 Ω passes only 8 mA where it
+wants 15–20. 100 Ω gives 18 mA. Two 220 Ω in parallel make 110 Ω if that is what is to hand.
+
+**Check:** the LCD shows `Sensor 1 off` / `Sensor 2 off`, clearly lit. Press a button and that row
+becomes a temperature.
 
 ---
 
