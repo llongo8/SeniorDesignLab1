@@ -19,7 +19,7 @@ Status key: **DONE** verified · **SW** software complete, needs hardware to ver
 | 1a | PC for user interface, display, control | FastAPI service + browser UI | [`pc-app/`](../pc-app/) | `smoke_test.py` | DONE |
 | 1b | Two probes, 1.0 ±0.1 m cable, robust, survive ice water | DS18B20 sealed stainless probes, 1 m lead, strain relief at both ends | [BOM](02-bill-of-materials.md) | T-8d ice bath | TODO |
 | 1c | Third box: display, buttons, battery, power switch; battery operated; data on internet | ESP32 + 16x2 LCD1602 + 2 buttons + 18650 pack + SPDT panel switch; WiFi station serving JSON | [`firmware/`](../firmware/) | T-3, T-4 | SW |
-| 1d | Cellphone receives texts/emails | SMTP email; carrier SMS gateway address for texts | [`alerts.py`](../pc-app/app/alerts.py) | T-7 | SW |
+| 1d | Cellphone receives texts/emails | SMTP email, read on the phone. The handout says "text messages **or** emails", so one channel satisfies it. An SMS path via a carrier gateway is implemented and worked initially, but the gateway began dropping messages — see Req 7 | [`alerts.py`](../pc-app/app/alerts.py) | T-7 | SW |
 
 ## 2. Mechanical requirements of the third box
 
