@@ -21,7 +21,7 @@ temperature-threshold alerts.
    │ DS18B20 #2   ├──────────►│   power switch      │                  ▼
    │ 1 m probe    │           │   battery           │           ┌──────────────┐
    └──────────────┘           │   300 s ring buffer │           │ Phone: email │
-                              └─────────────────────┘           │ / SMS alert  │
+                              └─────────────────────┘           │ on a phone   │
                                                                 └──────────────┘
 ```
 

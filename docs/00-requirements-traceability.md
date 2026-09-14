@@ -19,7 +19,7 @@ Status key: **DONE** verified · **SW** software complete, needs hardware to ver
 | 1a | PC for user interface, display, control | FastAPI service + browser UI | [`pc-app/`](../pc-app/) | `smoke_test.py` | DONE |
 | 1b | Two probes, 1.0 ±0.1 m cable, robust, survive ice water | DS18B20 sealed stainless probes, 1 m lead, strain relief at both ends | [BOM](02-bill-of-materials.md) | T-8d ice bath | TODO |
 | 1c | Third box: display, buttons, battery, power switch; battery operated; data on internet | ESP32 + 16x2 LCD1602 + 2 buttons + 18650 pack + SPDT panel switch; WiFi station serving JSON | [`firmware/`](../firmware/) | T-3, T-4 | SW |
-| 1d | Cellphone receives texts/emails | SMTP email, read on the phone. The handout says "text messages **or** emails", so one channel satisfies it. An SMS path via a carrier gateway is implemented and worked initially, but the gateway began dropping messages — see Req 7 | [`alerts.py`](../pc-app/app/alerts.py) | T-7 | SW |
+| 1d | Cellphone receives texts/emails | SMTP email, read on the phone. The handout says "text messages **or** emails", so one channel satisfies it. An SMS path via a carrier gateway was built and worked initially; it was removed after the gateway began silently dropping messages — see Req 7 | [`alerts.py`](../pc-app/app/alerts.py) | T-7 | SW |
 
 ## 2. Mechanical requirements of the third box
 
@@ -74,7 +74,7 @@ Status key: **DONE** verified · **SW** software complete, needs hardware to ver
 
 | # | Requirement | How we satisfy it | Where | Verified by | Status |
 |---|---|---|---|---|---|
-| 7 | Text/email when the temperature goes above a maximum or below a minimum; both messages, both limits and the destination all editable from the computer UI | `AlertEngine` with edge triggering, hysteresis and a cooldown. Destination is a phone number plus carrier **and** an email address, either or both; each is sent independently so one failing does not suppress the other. All fields edited in the Alerts panel and persisted to `data/alert-settings.json` | [`alerts.py`](../pc-app/app/alerts.py), [`settings_store.py`](../pc-app/app/settings_store.py) | T-7 | **Delivery DONE** — email, verified repeatedly. Both channels worked on 2026-09-03; by 2026-09-10 the SMS gateway had begun silently dropping messages under repeated testing while email stayed reliable, so email is the demonstrated channel. Req 1d and Req 7 are both worded disjunctively, so one channel satisfies them. Threshold tests T-7-1..4 outstanding. |
+| 7 | Text/email when the temperature goes above a maximum or below a minimum; both messages, both limits and the destination all editable from the computer UI | `AlertEngine` with edge triggering, hysteresis and a cooldown. Destination is an email address, edited in the Alerts panel and persisted to `data/alert-settings.json`. An SMS path through carrier gateways was built, worked, then removed once the gateway proved unreliable | [`alerts.py`](../pc-app/app/alerts.py), [`settings_store.py`](../pc-app/app/settings_store.py) | T-7 | **Delivery DONE** — email, verified repeatedly. Both channels worked on 2026-09-03; by 2026-09-10 the SMS gateway had begun silently dropping messages under repeated testing while email stayed reliable, so email is the demonstrated channel. Req 1d and Req 7 are both worded disjunctively, so one channel satisfies them. Threshold tests T-7-1..4 outstanding. |
 
 ## 8. Range of operation
 

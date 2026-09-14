@@ -8,61 +8,25 @@ and persisted to data/alert-settings.json so they survive a restart.
 Thresholds are stored in degrees Celsius always. The UI converts for display
 when the user has selected Fahrenheit; keeping one canonical unit on the server
 avoids a whole class of unit-mixing bugs.
+
+Alerts go by email only. An SMS path through carrier email-to-SMS gateways was
+built and worked, then the gateway began silently dropping messages while email
+stayed reliable -- see docs/00-requirements-traceability.md. Requirement 1d asks
+for a phone receiving "text messages **or** emails" and Requirement 7 says
+"text/email", both disjunctive, so email read on the phone satisfies them.
 """
 
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, List
 
-from pydantic import BaseModel, Field, computed_field, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from .config import DATA_DIR
 
 SETTINGS_PATH: Path = DATA_DIR / "alert-settings.json"
-
-# Email-to-SMS gateways for the US carriers a class in Iowa is likely to be on.
-#
-# There is no free way to go from a bare phone number to a carrier: the gateway
-# domain IS the carrier, so the carrier has to be known before an address can be
-# built. Paid lookup APIs exist (Twilio Lookup and similar) but they cost money,
-# need an account, and number portability means they can still be wrong. A
-# dropdown the user picks once is free, exact, and takes two seconds.
-#
-# These domains do change, and carriers have been quietly retiring the service.
-# Test delivery early rather than discovering it at checkoff.
-SMS_GATEWAYS: Dict[str, str] = {
-    "att": "txt.att.net",
-    "verizon": "vtext.com",
-    "tmobile": "tmomail.net",
-    "uscellular": "email.uscc.net",
-    "cricket": "sms.cricketwireless.net",
-    "boost": "sms.myboostmobile.com",
-    "metro": "mymetropcs.com",
-    "googlefi": "msg.fi.google.com",
-    "consumercellular": "mailmymobile.net",
-    "tracfone": "mmst5.tracfone.com",
-}
-
-CARRIER_LABELS: Dict[str, str] = {
-    "att": "AT&T",
-    "verizon": "Verizon",
-    "tmobile": "T-Mobile",
-    "uscellular": "US Cellular",
-    "cricket": "Cricket",
-    "boost": "Boost Mobile",
-    "metro": "Metro by T-Mobile",
-    "googlefi": "Google Fi",
-    "consumercellular": "Consumer Cellular",
-    "tracfone": "TracFone",
-}
-
-
-def carrier_choices() -> List[Dict[str, str]]:
-    """For the dropdown. Served by the API so the list lives in one place."""
-    return [{"id": k, "label": CARRIER_LABELS[k]} for k in SMS_GATEWAYS]
 
 
 class AlertSettings(BaseModel):
@@ -72,62 +36,30 @@ class AlertSettings(BaseModel):
     min_c: float = Field(default=15.0, description="Alert when temperature falls below this")
     max_c: float = Field(default=30.0, description="Alert when temperature rises above this")
 
-    # Requirement 7 names "phone number/email address" as the destination, so
-    # they are two fields rather than one box the user has to know how to fill.
-    # Both are optional; alerts go to whichever are set.
+    # Where alerts go. Requirement 7 requires this to be editable from the UI.
     email_to: str = ""
-    sms_number: str = ""     # digits as typed; normalised on the way out
-    sms_carrier: str = ""    # a key of SMS_GATEWAYS
 
     @model_validator(mode="before")
     @classmethod
-    def _migrate_recipient(cls, data: Any) -> Any:
-        """Older settings files had a single `recipient` holding either an email
-        address or a hand-typed SMS gateway address.
+    def _migrate_old_fields(cls, data: Any) -> Any:
+        """Carry older settings files forward.
 
-        A gateway address is split back into the number and carrier fields,
-        where it now belongs -- otherwise it would sit in the email box looking
-        like an email, and the phone fields would look unconfigured.
+        `recipient` was the single destination field before email and SMS were
+        split apart. A gateway address stored there is still a perfectly good
+        email address, so it moves across unchanged. Leftover `sms_number` and
+        `sms_carrier` keys are ignored by pydantic and simply disappear on the
+        next save.
         """
-        if not (isinstance(data, dict) and "recipient" in data and not data.get("email_to")):
-            return data
-
-        data = dict(data)
-        old = (data.pop("recipient") or "").strip()
-        local, _, domain = old.partition("@")
-
-        for key, gateway in SMS_GATEWAYS.items():
-            if domain.lower() == gateway and local.isdigit():
-                data.setdefault("sms_number", local)
-                data.setdefault("sms_carrier", key)
-                return data
-
-        data["email_to"] = old
+        if isinstance(data, dict) and data.get("recipient") and not data.get("email_to"):
+            data = dict(data)
+            data["email_to"] = (data.pop("recipient") or "").strip()
         return data
 
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def sms_address(self) -> str:
-        """The gateway address the phone number and carrier resolve to, or "" if
-        either is missing or the number is not 10 digits. Exposed so the UI can
-        show exactly what will be sent to rather than leaving it a mystery."""
-        digits = re.sub(r"\D", "", self.sms_number or "")
-        if len(digits) == 11 and digits.startswith("1"):
-            digits = digits[1:]          # tolerate a leading country code
-        domain = SMS_GATEWAYS.get(self.sms_carrier or "")
-        if len(digits) != 10 or not domain:
-            return ""
-        return f"{digits}@{domain}"
-
     def destinations(self) -> List[str]:
-        """Everywhere an alert should go. Requirement 7 is satisfied by either
-        channel, but nothing stops us using both."""
-        out = []
-        if self.email_to.strip():
-            out.append(self.email_to.strip())
-        if self.sms_address:
-            out.append(self.sms_address)
-        return out
+        """Everywhere an alert should go. A list rather than a single address so
+        the send path and the test endpoint can report per-destination results
+        without caring how many there are."""
+        return [self.email_to.strip()] if self.email_to.strip() else []
 
     message_low: str = "ALERT: {sensor} has dropped to {temp} (limit {limit})."
     message_high: str = "ALERT: {sensor} has risen to {temp} (limit {limit})."

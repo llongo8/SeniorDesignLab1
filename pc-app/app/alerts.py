@@ -1,4 +1,4 @@
-"""Threshold alerting to a phone by email / SMS gateway (Requirement 7)."""
+"""Threshold alerting by email (Requirement 7)."""
 
 from __future__ import annotations
 
@@ -105,9 +105,8 @@ class AlertEngine:
     async def send(self, recipients: List[str], subject: str, body: str) -> List[str]:
         """Send to every destination, returning the ones that failed.
 
-        Each address is attempted independently: a phone whose carrier gateway
-        has stopped accepting mail must not stop the email going out, and vice
-        versa. A partial failure is reported but is not treated as a total one.
+        Each address is attempted independently, so one bad destination does
+        not suppress the others. A partial failure is reported as one.
         """
         if not settings.smtp_configured:
             self.last_error = "SMTP is not configured -- fill in SMTP_* in pc-app/.env"

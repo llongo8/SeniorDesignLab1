@@ -145,28 +145,6 @@ async def put_settings(value: settings_store.AlertSettings) -> settings_store.Al
     return value
 
 
-@app.get("/api/carriers")
-async def carriers() -> list[dict]:
-    """The carrier dropdown. Served from the server so the gateway table has one
-    home -- a phone number alone cannot identify a carrier, so the user picks."""
-    return settings_store.carrier_choices()
-
-
-@app.post("/api/settings/preview-sms")
-async def preview_sms(body: dict) -> dict:
-    """Resolve a number and carrier to a gateway address without saving.
-
-    The UI could build this string itself, but then the normalisation rules --
-    stripping punctuation, tolerating a leading country code, the gateway table
-    -- would exist in two places and drift apart.
-    """
-    probe = settings_store.AlertSettings(
-        sms_number=str(body.get("sms_number", "")),
-        sms_carrier=str(body.get("sms_carrier", "")),
-    )
-    return {"sms_address": probe.sms_address}
-
-
 @app.post("/api/alerts/test")
 async def test_alert() -> dict:
     """Send to every configured destination, so the team can prove delivery
@@ -176,7 +154,7 @@ async def test_alert() -> dict:
     if not destinations:
         raise HTTPException(
             status_code=400,
-            detail="No destination set. Add an email address, or a phone number and its carrier.",
+            detail="No destination set. Add an email address in the Alerts panel.",
         )
 
     failures = await alerts.send(
