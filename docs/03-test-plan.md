@@ -52,6 +52,39 @@ phantom gaps in the graph. Current status: **18 passed, 0 failed**.
 > tip well below the surface without touching the container wall. Getting this wrong is the usual
 > reason a perfectly good thermometer appears to read 2 °C high.
 
+## OPEN FAULT — sensor 1 intermittently reads exactly 85.00 °C
+
+**Found 2026-09-14, unresolved. This is the biggest risk to checkoff.**
+
+Shortly after the probe connectors were fitted, sensor 1 returned **exactly 85.00 °C for 45
+consecutive samples** (45 s), then recovered with no intervention. Sensor 2 never left
+22.75–23.25 °C during the same window. A single 25.00 °C sample appeared next to the episode.
+A further 90 s of watching showed no recurrence, so the fault is **intermittent, not persistent**.
+
+**85.00 °C is the DS18B20 power-on-reset value of the temperature register.** Reading it back
+means the part reset, or browned out, and its scratchpad was never overwritten by a completed
+conversion. It is not a real temperature and it is not sensor noise.
+
+Why it matters more than it looks:
+
+* `present` stayed **true** throughout, so **requirement 4d never fires** — the display and the PC
+  both show 85.00 °C as though it were a good reading. A bogus reading that announces itself as
+  valid is worse than a detected fault.
+* It would fail **8c** (22 ±4 °C) outright if it happened during the demo.
+* It started after the connectors went on, which makes the new connector the prime suspect.
+
+Most likely causes, in the order worth checking:
+
+1. **Intermittent VDD or GND in sensor 1's new connector.** Do a wiggle test with the probe
+   plugged in and the graph on screen. Check continuity on all three pins while flexing the
+   connector and the strain relief.
+2. Marginal 4.7 kΩ pull-up or a cold solder joint on that bus.
+3. Rail sag on the supply module during WiFi transmit bursts.
+
+A firmware guard (reject a sustained exact 85.00 °C, or re-read on a suspicious value) is
+**deliberately not implemented yet** — it would hide a hardware fault we have not diagnosed.
+Fix the wiring first; add the guard only as belt and braces afterwards.
+
 ## Manual — mechanical
 
 Do these **last**, and do them deliberately. They can break the prototype.
@@ -72,16 +105,18 @@ a photograph before and after — a photograph of a box that survived a drop is 
 | ID | Requirement | Procedure | Pass criterion | Result |
 |---|---|---|---|---|
 | T-5a | 5a | Watch the live readout for 60 s. | Updates once a second, large font, both sensors. | |
+| T-5b | 5b | Press the on-screen button 10 times, alternating sensors. Time each round trip and confirm the box actually toggled. | Under **1 s** per press, state flips every time. | **PASS** 2026-09-14: **10/10** flipped. Worst **487 ms**, median 154 ms, best 100 ms. |
+| T-5c | 5c | Kill the PC app, restart it, and time how long until the full 300 s window is populated. | Full history **within 10 s** of the software starting. | **PASS** 2026-09-14: **1.56 s** from process launch to a populated window, **300/300 slots on both sensors**. This is the ring-buffer-in-firmware decision paying off — the PC downloads the box's history rather than accumulating its own. |
 | T-5c.i | 5c.i | Toggle C/F. Warm a probe past 50 °C. | Axis stays pinned at 10–50 °C / 50–122 °F. Off-scale marker appears; the axis never rescales. | |
 | T-5c.ii | 5c.ii | Watch the graph for 60 s. | New data enters on the right, scrolls left, one point per second. | |
 | T-5c.iii | 5c.iii | Read the x axis. | Labelled in seconds ago, 300 → 0. | |
 | T-5c.iv | 5c.iv | Unplug a probe for 20 s, then take a probe outside the 10–50 °C band. | The gap and the off-scale region are obviously different from each other. | **PASS** 2026-08-27: ice bath drove both traces below the 10 °C floor — clamped at the axis with red off-scale markers — while reflashing left hatched no-data bands. Both visible on one screen; screenshot kept for the report. |
 | T-6 | 6 | With the PC app running, switch the box off, wait 30 s, switch it on. Time it. | Live display and 300 s of graph return **within 10 s**. | |
 | T-7-0 | 7 | Press "Send a test message" with a destination configured. | An email arrives. | **PASS** 2026-09-03 on both channels. **2026-09-10: email still reliable, the SMS gateway stopped delivering** after roughly two dozen near-identical messages in a few minutes — the app reported every one as sent with no error, so T-Mobile is filtering at `tmomail.net`. Email is our channel; the SMS path has since been removed from the code. |
-| T-7-1 | 7 | Set the max below room temperature. Wait. | The email arrives, readable on the phone. | |
-| T-7-2 | 7 | Set the min above room temperature. Wait. | The low-temperature message arrives. | |
-| T-7-3 | 7 | Change both messages, both limits and the destination in the UI. Trigger again. | The new message arrives at the new destination. | |
-| T-7-4 | 7 | Leave a sensor out of range for 10 minutes. | Alerts are rate-limited by the cooldown, not sent every second. | |
+| T-7-1 | 7 | Set the max below room temperature. Wait. | The email arrives, readable on the phone. | **PASS** 2026-09-14: alert fired **3.1 s** after the limit was lowered, both sensors. |
+| T-7-2 | 7 | Set the min above room temperature. Wait. | The low-temperature message arrives. | **PASS** 2026-09-14: fired **3.0 s** after the limit was raised. |
+| T-7-3 | 7 | Change both messages, both limits and the destination in the UI. Trigger again. | The new message arrives at the new destination. | **PASS** 2026-09-14 for message text and limits: an edited `message_low` carrying a timestamp was the text delivered, fired in **2.5 s**. **Destination change still to do by hand** — it needs a second mailbox to prove delivery moved. |
+| T-7-4 | 7 | Leave a sensor out of range for 10 minutes. | Alerts are rate-limited by the cooldown, not sent every second. | **PASS** 2026-09-14: **0** repeat sends across 60 s held out of range, against ~120 if every poll sent. Note the rate limiting here is *edge triggering* — the sensor never re-entered the zone, so the cooldown was not even the binding constraint. Worth saying that in the report rather than claiming the cooldown did it. |
 
 ## Checkoff dry run
 

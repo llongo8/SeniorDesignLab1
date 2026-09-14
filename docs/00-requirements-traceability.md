@@ -45,6 +45,14 @@ Status key: **DONE** verified · **SW** software complete, needs hardware to ver
 | 4c | Both buttons independently on or off, screen shows the right thing | Per-sensor `displayOn` flag; all four combinations rendered by the same loop | [`main.cpp` `formatRow`](../firmware/src/main.cpp) | T-4c | SW |
 | 4d | Sensor not plugged in or not working: display notifies the user of an error | `present` false renders "Sensor n ERROR"; a fault is still flagged as "Sensor n off ERR" while the button is off, so a fault is never hidden by a switched-off sensor | [`main.cpp` `formatRow`](../firmware/src/main.cpp) | T-4d | SW / **ASK** |
 
+> **OPEN FAULT (affects 4d, 8c, 1b, 2b):** on 2026-09-14 sensor 1 returned **exactly 85.00 °C for
+> 45 consecutive seconds**, then recovered unaided. 85.00 °C is the DS18B20 power-on-reset register
+> value — the part reset or browned out. Critically, `present` stayed **true**, so 4d did *not*
+> fire: the bogus value was displayed as a good reading. Intermittent, and it began after the probe
+> connectors were fitted, so the new connector on sensor 1 is the prime suspect. Full detail and the
+> diagnosis order are in [the test plan](03-test-plan.md#open-fault--sensor-1-intermittently-reads-exactly-8500-c).
+> **This is the top risk to checkoff.**
+
 > **ASK (4d):** the requirement says the display must notify the user if *any* sensor is faulty,
 > but requirement 4 also says a sensor whose button is off should read "Sensor n off". We currently
 > show both. Confirm this is what is wanted — see [open questions](05-open-questions.md).
@@ -56,8 +64,8 @@ Status key: **DONE** verified · **SW** software complete, needs hardware to ver
 | 5a | Real-time temperature for both sensors, C or F chosen by the user, large font, updated once a second | 1 Hz poll loop locked to the wall-clock second; `clamp(3rem, 11vw, 6rem)` readout; unit toggle persisted in the browser | [`app.js` `renderLive`](../pc-app/static/app.js) | smoke test | DONE |
 | 5a.i | Unplugged sensor shows "unplugged sensor" instead of a temperature | Rendered from `present: false` | [`app.js`](../pc-app/static/app.js) | smoke test | DONE |
 | 5a.ii | Box switch off shows "no data available" | Rendered from `box_online: false`, declared after 3 s of failed polls | [`poller.py`](../pc-app/app/poller.py) | smoke test | DONE |
-| 5b | The computer can virtually press a button; response under 1 second | `POST /api/button/{id}` proxies to the box, which repaints before replying | [`main.py`](../pc-app/app/main.py) | smoke test (measured 16-47 ms) | DONE |
-| 5c | Graph of past readings; last 300 s available within 10 s of the software starting | **The box holds the history, not the PC.** A 300-entry ring buffer in firmware is downloaded on connect, so the PC has a full window immediately after launch. | [`main.cpp` `handleHistory`](../firmware/src/main.cpp), [`history.py`](../pc-app/app/history.py) | smoke test | DONE |
+| 5b | The computer can virtually press a button; response under 1 second | `POST /api/button/{id}` proxies to the box, which repaints before replying | [`main.py`](../pc-app/app/main.py) | T-5b, smoke test | **DONE** 487 ms worst of 10 |
+| 5c | Graph of past readings; last 300 s available within 10 s of the software starting | **The box holds the history, not the PC.** A 300-entry ring buffer in firmware is downloaded on connect, so the PC has a full window immediately after launch. | [`main.cpp` `handleHistory`](../firmware/src/main.cpp), [`history.py`](../pc-app/app/history.py) | T-5c, smoke test | **DONE** 1.56 s cold start, 300/300 slots |
 | 5c.i | C/F switchable; top of graph always 50 °C (122 °F), bottom always 10 °C (50 °F) | `Y_MIN_C`/`Y_MAX_C` are constants, never autoscaled; axis ticks relabel per unit | [`app.js` `drawChart`](../pc-app/static/app.js) | T-5c.i | DONE |
 | 5c.ii | Scrolls horizontally, newest on the right, one new value per second | Series is redrawn each second from a window ending at "now" | [`app.js`](../pc-app/static/app.js) | T-5c.ii | DONE |
 | 5c.iii | 300 s total, x axis labelled in seconds ago, 300 → 0 | Gridlines every 60 s, labelled 300…0 | [`app.js` `drawChart`](../pc-app/static/app.js) | T-5c.iii | DONE |
@@ -74,7 +82,7 @@ Status key: **DONE** verified · **SW** software complete, needs hardware to ver
 
 | # | Requirement | How we satisfy it | Where | Verified by | Status |
 |---|---|---|---|---|---|
-| 7 | Text/email when the temperature goes above a maximum or below a minimum; both messages, both limits and the destination all editable from the computer UI | `AlertEngine` with edge triggering, hysteresis and a cooldown. Destination is an email address, edited in the Alerts panel and persisted to `data/alert-settings.json`. An SMS path through carrier gateways was built, worked, then removed once the gateway proved unreliable | [`alerts.py`](../pc-app/app/alerts.py), [`settings_store.py`](../pc-app/app/settings_store.py) | T-7 | **Delivery DONE** — email, verified repeatedly. Both channels worked on 2026-09-03; by 2026-09-10 the SMS gateway had begun silently dropping messages under repeated testing while email stayed reliable, so email is the demonstrated channel. Req 1d and Req 7 are both worded disjunctively, so one channel satisfies them. Threshold tests T-7-1..4 outstanding. |
+| 7 | Text/email when the temperature goes above a maximum or below a minimum; both messages, both limits and the destination all editable from the computer UI | `AlertEngine` with edge triggering, hysteresis and a cooldown. Destination is an email address, edited in the Alerts panel and persisted to `data/alert-settings.json`. An SMS path through carrier gateways was built, worked, then removed once the gateway proved unreliable | [`alerts.py`](../pc-app/app/alerts.py), [`settings_store.py`](../pc-app/app/settings_store.py) | T-7 | **DONE.** All four threshold tests passed 2026-09-14: T-7-1 high alert fired in **3.1 s**, T-7-2 low in **3.0 s**, T-7-3 edited message text delivered in **2.5 s**, T-7-4 **0** repeat sends across 60 s out of range against ~120 unlimited. Email verified repeatedly; both channels worked on 2026-09-03, but by 2026-09-10 the SMS gateway was silently dropping messages while email stayed reliable, so email is the demonstrated channel. Req 1d and Req 7 are both worded disjunctively, so one channel satisfies them. **Remaining by hand:** changing the *destination* to a second mailbox (T-7-3 covered the message text and limits only). |
 
 ## 8. Range of operation
 
