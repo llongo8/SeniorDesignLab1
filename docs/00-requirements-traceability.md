@@ -18,7 +18,7 @@ Status key: **DONE** verified · **SW** software complete, needs hardware to ver
 |---|---|---|---|---|---|
 | 1a | PC for user interface, display, control | FastAPI service + browser UI | [`pc-app/`](../pc-app/) | `smoke_test.py` | DONE |
 | 1b | Two probes, 1.0 ±0.1 m cable, robust, survive ice water | DS18B20 sealed stainless probes, 1 m lead, strain relief at both ends | [BOM](02-bill-of-materials.md) | T-8d ice bath | TODO |
-| 1c | Third box: display, buttons, battery, power switch; battery operated; data on internet | ESP32 + 16x2 LCD1602 + 2 buttons + 18650 pack + SPDT panel switch; WiFi station serving JSON | [`firmware/`](../firmware/) | T-3, T-4 | SW |
+| 1c | Third box: display, buttons, battery, power switch; battery operated; data on internet | ESP32 + 16x2 LCD1602 + 2 buttons + 18650 pack + SPDT panel switch; WiFi station serving JSON | [`firmware/`](../firmware/) | T-3, T-4 | **DONE** ran 5+ min on a 9 V battery, no USB, zero reboots |
 | 1d | Cellphone receives texts/emails | SMTP email, read on the phone. The handout says "text messages **or** emails", so one channel satisfies it. An SMS path via a carrier gateway was built and worked initially; it was removed after the gateway began silently dropping messages — see Req 7 | [`alerts.py`](../pc-app/app/alerts.py) | T-7 | SW |
 
 ## 2. Mechanical requirements of the third box
@@ -28,7 +28,7 @@ Status key: **DONE** verified · **SW** software complete, needs hardware to ver
 | 2a | Enclosed, survives a drop from the bench, works upside down | ABS project box, PCB and battery mechanically fastened (not loose), no gravity-dependent parts | [Design §6](01-system-design.md) | T-2a drop test | TODO |
 | 2b | Panel-mounted connectors, easy for a casual user | GX12-3 panel connectors, nut-secured through the enclosure wall | [BOM](02-bill-of-materials.md) | T-2b | TODO |
 | 2c | Dropped with cables attached, nothing breaks (disconnection is OK) | Connectors chosen to pull free rather than transmit shock to the PCB; internal wiring strain-relieved | [Design §6](01-system-design.md) | T-2c | TODO |
-| 2d | Sensor unplugged and replugged, normal operation resumes with no user action | Each probe on its own 1-Wire bus; `pollRediscovery()` re-enumerates a silent bus every 2 s and restores resolution automatically | [`main.cpp` `pollRediscovery`](../firmware/src/main.cpp) | T-2d, smoke test | SW |
+| 2d | Sensor unplugged and replugged, normal operation resumes with no user action | Each probe on its own 1-Wire bus; `pollRediscovery()` re-enumerates a silent bus every 2 s and restores resolution automatically | [`main.cpp` `pollRediscovery`](../firmware/src/main.cpp) | T-2d, smoke test | **DONE** real probe 2026-09-15 |
 
 ## 3. Power switch
 
@@ -42,16 +42,16 @@ Status key: **DONE** verified · **SW** software complete, needs hardware to ver
 |---|---|---|---|---|---|
 | 4a | Correct temperature appears when the button is pressed, no delay above ~20 ms **(MEASURED 7.3 ms)** | Buttons polled at the top of `loop()` and again after the 1-Wire read; the display is repainted straight from the debounce edge using the cached reading, never waiting for the next sample tick. A full 32-character LCD refresh measures 7.3 ms against the 20 ms budget. Worst case measured at runtime, printed on serial and reported at `GET /api/info`. | [`main.cpp` `pollButtons`](../firmware/src/main.cpp), [`config.h`](../firmware/include/config.h) | T-4a scope capture | SW |
 | 4b | Readable under normal indoor lighting, all in-range temperatures shown correctly | Blue negative-mode LCD1602, backlit from 5 V. One 16-character row per sensor, so the screen shows the handout wording ("Sensor 1 off") rather than an abbreviation | [`main.cpp` `formatRow`](../firmware/src/main.cpp) | T-4b | SW |
-| 4c | Both buttons independently on or off, screen shows the right thing | Per-sensor `displayOn` flag; all four combinations rendered by the same loop | [`main.cpp` `formatRow`](../firmware/src/main.cpp) | T-4c | SW |
+| 4c | Both buttons independently on or off, screen shows the right thing | Per-sensor `displayOn` flag; all four combinations rendered by the same loop | [`main.cpp` `formatRow`](../firmware/src/main.cpp) | T-4c | **DONE** all four combinations |
 | 4d | Sensor not plugged in or not working: display notifies the user of an error | `present` false renders "Sensor n ERROR"; a fault is still flagged as "Sensor n off ERR" while the button is off, so a fault is never hidden by a switched-off sensor | [`main.cpp` `formatRow`](../firmware/src/main.cpp) | T-4d | SW / **ASK** |
 
-> **OPEN FAULT (affects 4d, 8c, 1b, 2b):** on 2026-09-14 sensor 1 returned **exactly 85.00 °C for
-> 45 consecutive seconds**, then recovered unaided. 85.00 °C is the DS18B20 power-on-reset register
-> value — the part reset or browned out. Critically, `present` stayed **true**, so 4d did *not*
-> fire: the bogus value was displayed as a good reading. Intermittent, and it began after the probe
-> connectors were fitted, so the new connector on sensor 1 is the prime suspect. Full detail and the
-> diagnosis order are in [the test plan](03-test-plan.md#open-fault--sensor-1-intermittently-reads-exactly-8500-c).
-> **This is the top risk to checkoff.**
+> **RESOLVED (was logged as an open fault):** the 85.00 °C readings of 2026-09-14 were caused by a
+> **swapped red and blue rail wire**, found and fixed 2026-09-15 — not the probe connector and not a
+> flat battery, which were the first two theories. One wire reverse-powered both probes, stopped the
+> ESP32 running on module power, and left the backlight lit with no text. Not seen since.
+> **What survives the fix:** a DS18B20 reporting 85.00 °C still sets `present = true`, so 4d does not
+> fire and the bogus value displays as good data. See
+> [the test plan](03-test-plan.md#resolved--the-8500-c-readings-were-a-swapped-rail-wire).
 
 > **ASK (4d):** the requirement says the display must notify the user if *any* sensor is faulty,
 > but requirement 4 also says a sensor whose button is off should read "Sensor n off". We currently
@@ -76,7 +76,7 @@ Status key: **DONE** verified · **SW** software complete, needs hardware to ver
 
 | # | Requirement | How we satisfy it | Where | Verified by | Status |
 |---|---|---|---|---|---|
-| 6 | Box switched on while the computer is running: graph and live display appear within 10 s | The poller notices the box within one poll and re-downloads the ring buffer immediately | [`poller.py` `_backfill`](../pc-app/app/poller.py) | smoke test (measured 1.2 s) | DONE |
+| 6 | Box switched on while the computer is running: graph and live display appear within 10 s | The poller notices the box within one poll and re-downloads the ring buffer immediately | [`poller.py` `_backfill`](../pc-app/app/poller.py) | T-6, smoke test | **DONE** 1.3 s, re-verified 2026-09-15 |
 
 ## 7. Alerts
 
@@ -99,9 +99,9 @@ Status key: **DONE** verified · **SW** software complete, needs hardware to ver
 
 | Status | Count |
 |---|---|
-| DONE (verified end to end) | 14 |
-| SW (software done, awaiting hardware) | 10 |
-| TODO (mechanical / bench measurement) | 5 |
+| DONE (verified end to end) | 22 |
+| SW (software done, awaiting hardware) | 4 |
+| TODO (blocked on the enclosure and connectors) | 4 |
 
 The software risk is retired and both temperature-accuracy requirements are measured and
 passing. **The remaining risk is entirely mechanical, and it is the part with

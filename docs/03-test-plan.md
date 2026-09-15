@@ -35,9 +35,9 @@ phantom gaps in the graph. Current status: **18 passed, 0 failed**.
 | T-3b | 3 | Check the switch sense: lever **up** should be on. | Up = powered, down = dark. A backwards switch is an avoidable mark to lose. | |
 | T-4a | 4a | Press each button ~20 times with the serial monitor open. The firmware prints a `[perf]` line whenever the worst case grows. Cross-check against `max_button_latency_us` at `GET /api/info` once WiFi is up. For an independent check, scope the button pin against the LCD `E` line (GPIO 22). | **< 20 ms**, worst of 20 presses. | **7.3 ms** (bench, 2026-08-27) |
 | T-4b | 4b | View the display under normal room lighting from 1 m, at eye level and at 45°. | All digits legible. | |
-| T-4c | 4c | Exercise all four button combinations: off/off, on/off, off/on, on/on. | Correct value or "Sensor n off" in every case. | |
+| T-4c | 4c | Exercise all four button combinations: off/off, on/off, off/on, on/on. | Correct value or "Sensor n off" in every case. | **PASS** 2026-09-15: all four confirmed on the LCD by eye. The state machine was also driven independently through `POST /api/button` — all four combinations correct. |
 | T-4d | 4d | With a button on, unplug that probe. Repeat with the button off. | Error is shown in both cases. | |
-| T-2d | 2d | Unplug a probe for 30 s, plug it back in. Touch nothing else. | Reading returns within ~4 s with no reset, no button press, no reconnection. | |
+| T-2d | 2d | Unplug a probe for 30 s, plug it back in. Touch nothing else. | Reading returns within ~4 s with no reset, no button press, no reconnection. | **PASS** 2026-09-15 on a real probe at the connector — resumed unaided. Simulator run measured recovery at **0.9 s**. |
 | T-8b | 8b | Hold the probe tip in a closed hand. Then bring a hot soldering iron close to it. | Rises within a few seconds; faster with the iron. | |
 | T-8c | 8c | Leave both probes in still air **away from the ESP32** for 5 minutes — a board running WiFi is a small heater. Compare against a lab thermometer. | **22 ±4 °C** (18–26 °C). | **PASS** 2026-08-27: **21.7–22.2 °C** with the probes in free air. An earlier 26.7 °C reading was taken with the probes lying on the breadboard beside the ESP32 — self-heating, not the room and not the parts. Keep probes clear of the board when measuring. |
 | T-8e | 8c | Bundle both probe tips together in still air for 5 minutes. | The two agree within ~1 °C. A larger gap means at least one part is outside its ±0.5 °C spec. | **PASS** 2026-08-27: spread 0.5–1.1 °C across three samples in the ice bath. Two parts at ±0.5 °C may legitimately sit 1.0 °C apart, and a stirred slurry always carries some gradient. Both in spec. |
@@ -52,38 +52,35 @@ phantom gaps in the graph. Current status: **18 passed, 0 failed**.
 > tip well below the surface without touching the container wall. Getting this wrong is the usual
 > reason a perfectly good thermometer appears to read 2 °C high.
 
-## OPEN FAULT — sensor 1 intermittently reads exactly 85.00 °C
+## RESOLVED — the 85.00 °C readings were a swapped rail wire
 
-**Found 2026-09-14, unresolved. This is the biggest risk to checkoff.**
+**Found 2026-09-14, root cause found and fixed 2026-09-15.**
 
-Shortly after the probe connectors were fitted, sensor 1 returned **exactly 85.00 °C for 45
-consecutive samples** (45 s), then recovered with no intervention. Sensor 2 never left
-22.75–23.25 °C during the same window. A single 25.00 °C sample appeared next to the episode.
-A further 90 s of watching showed no recurrence, so the fault is **intermittent, not persistent**.
+Sensor 1 returned exactly 85.00 °C for 45 consecutive samples, then recovered unaided. 85.00 °C is
+the DS18B20 power-on-reset value of the temperature register, so the part was losing its supply.
 
-**85.00 °C is the DS18B20 power-on-reset value of the temperature register.** Reading it back
-means the part reset, or browned out, and its scratchpad was never overwritten by a completed
-conversion. It is not a real temperature and it is not sensor noise.
+It was first attributed to a marginal probe connector, with a flat 9 V battery as a secondary
+suspect. **Both were wrong.** The actual cause was a **swapped red and blue rail wire**. That single
+error reverse-powered both probes, stopped the ESP32 running on module power, and left the LCD
+backlight lit with no text — three symptoms that presented as three separate faults and sent the
+diagnosis in three wrong directions at once.
 
-Why it matters more than it looks:
+Not seen since the wires were corrected: clean across an 18/18 smoke run and a 5-minute battery run
+with both probes reading and zero reboots.
 
-* `present` stayed **true** throughout, so **requirement 4d never fires** — the display and the PC
-  both show 85.00 °C as though it were a good reading. A bogus reading that announces itself as
-  valid is worse than a detected fault.
-* It would fail **8c** (22 ±4 °C) outright if it happened during the demo.
-* It started after the connectors went on, which makes the new connector the prime suspect.
+> **Keep this for the report, because it outlived its cause.** A DS18B20 reporting 85.00 °C still
+> sets `present = true`, so **requirement 4d does not fire** and the bogus value is rendered as a
+> good reading on both the LCD and the PC. That is a real gap in the error detection regardless of
+> what pulls the supply down. A firmware guard — treat a sustained exact 85.00 °C as suspect and
+> re-read — is worth proposing in the report as future work. It is deliberately not implemented,
+> because the hardware fault is fixed and a guard would only have masked it.
 
-Most likely causes, in the order worth checking:
+### What the episode is worth as evidence
 
-1. **Intermittent VDD or GND in sensor 1's new connector.** Do a wiggle test with the probe
-   plugged in and the graph on screen. Check continuity on all three pins while flexing the
-   connector and the strain relief.
-2. Marginal 4.7 kΩ pull-up or a cold solder joint on that bus.
-3. Rail sag on the supply module during WiFi transmit bursts.
-
-A firmware guard (reject a sustained exact 85.00 °C, or re-read on a suspicious value) is
-**deliberately not implemented yet** — it would hide a hardware fault we have not diagnosed.
-Fix the wiring first; add the guard only as belt and braces afterwards.
+Three symptoms, one wire. Worth writing up as a debugging narrative: the backlight staying lit while
+the text vanished is what made it look like a power-supply problem rather than a wiring error, and
+the decisive test was polling the box over WiFi with USB unplugged — it answered nothing, which
+ruled out a display-contrast explanation in one step.
 
 ## Manual — mechanical
 
@@ -111,7 +108,7 @@ a photograph before and after — a photograph of a box that survived a drop is 
 | T-5c.ii | 5c.ii | Watch the graph for 60 s. | New data enters on the right, scrolls left, one point per second. | |
 | T-5c.iii | 5c.iii | Read the x axis. | Labelled in seconds ago, 300 → 0. | |
 | T-5c.iv | 5c.iv | Unplug a probe for 20 s, then take a probe outside the 10–50 °C band. | The gap and the off-scale region are obviously different from each other. | **PASS** 2026-08-27: ice bath drove both traces below the 10 °C floor — clamped at the axis with red off-scale markers — while reflashing left hatched no-data bands. Both visible on one screen; screenshot kept for the report. |
-| T-6 | 6 | With the PC app running, switch the box off, wait 30 s, switch it on. Time it. | Live display and 300 s of graph return **within 10 s**. | |
+| T-6 | 6 | With the PC app running, switch the box off, wait 30 s, switch it on. Time it. | Live display and 300 s of graph return **within 10 s**. | **PASS** 2026-09-15: **1.3 s**, history served again immediately. Re-run against the simulator after the firmware changes, so a real power-cycle at checkoff is still worth doing. |
 | T-7-0 | 7 | Press "Send a test message" with a destination configured. | An email arrives. | **PASS** 2026-09-03 on both channels. **2026-09-10: email still reliable, the SMS gateway stopped delivering** after roughly two dozen near-identical messages in a few minutes — the app reported every one as sent with no error, so T-Mobile is filtering at `tmomail.net`. Email is our channel; the SMS path has since been removed from the code. |
 | T-7-1 | 7 | Set the max below room temperature. Wait. | The email arrives, readable on the phone. | **PASS** 2026-09-14: alert fired **3.1 s** after the limit was lowered, both sensors. |
 | T-7-2 | 7 | Set the min above room temperature. Wait. | The low-temperature message arrives. | **PASS** 2026-09-14: fired **3.0 s** after the limit was raised. |

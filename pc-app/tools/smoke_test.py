@@ -12,19 +12,25 @@ Run all three in separate terminals:
     uvicorn app.main:app --port 8000
     python tools/smoke_test.py
 
+Set SMOKE_APP / SMOKE_BOX to point the suite somewhere else, for example at a
+scratch instance on port 8001 while the real one keeps serving on 8000.
+
 Requirements covered: 5a.i, 5a.ii, 5b, 5c, 5c.iv, 6.
 """
 
 from __future__ import annotations
 
+import os
 import sys
 import time
 import urllib.request
 import json
 from typing import Optional
 
-APP = "http://127.0.0.1:8000"
-BOX = "http://127.0.0.1:8080"
+# Overridable so the suite can run against a scratch app instance on another
+# port without taking down a live one. Defaults are unchanged.
+APP = os.environ.get("SMOKE_APP", "http://127.0.0.1:8000")
+BOX = os.environ.get("SMOKE_BOX", "http://127.0.0.1:8080")
 
 passed = 0
 failed = 0
