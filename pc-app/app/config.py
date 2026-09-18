@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     poll_period_s: float = 1.0
     box_timeout_s: float = 0.8  # must stay well under poll_period_s
 
+    # --- History kept across restarts ---
+    # Overridable so a scratch instance (tests, a second port) never writes
+    # over the history of the one actually talking to the box.
+    history_file: Path = DATA_DIR / "history.json"
+
     # --- Mail ---
     smtp_host: str = ""
     smtp_port: int = 587

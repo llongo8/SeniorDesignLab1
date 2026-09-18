@@ -18,10 +18,20 @@ off-scale. Two design consequences follow, and both are load-bearing:
 
 from __future__ import annotations
 
+import json
+import logging
+import os
 import time
+from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence
 
+log = logging.getLogger(__name__)
+
 WINDOW_S = 300
+
+# Bumped if the file layout ever changes, so an old file is ignored rather
+# than misread.
+FILE_VERSION = 1
 
 
 class HistoryStore:
@@ -75,6 +85,71 @@ class HistoryStore:
         bucket = self._data[sensor_id]
         first = end - self.window_s + 1
         return [bucket.get(t) for t in range(first, end + 1)]
+
+    def save(self, path: Path, box: str) -> None:
+        """Write the store to disk.
+
+        Called every few seconds, not only at shutdown: the server is as likely
+        to be killed (terminal closed, process ended) as stopped cleanly, and a
+        kill runs no shutdown code. The write goes to a temporary file that then
+        replaces the real one, so a kill mid-write leaves the previous save
+        intact rather than a half-written file.
+        """
+        payload = {
+            "version": FILE_VERSION,
+            "box": box,
+            "sensors": {
+                str(sid): {str(t): v for t, v in bucket.items()}
+                for sid, bucket in self._data.items()
+            },
+        }
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_name(path.name + ".tmp")
+        tmp.write_text(json.dumps(payload), encoding="utf-8")
+        os.replace(tmp, path)
+
+    def load(self, path: Path, box: str) -> int:
+        """Restore a previous save, returning how many readings came back.
+
+        Anything that does not fit is dropped rather than trusted: a corrupt
+        file, readings older than the window, or a file saved while talking to
+        a different box. That last one matters most. Pointing BOX_HOST at the
+        simulator and back must never put simulated readings on the real graph.
+
+        Call before the poller starts. Its backfill only fills seconds that are
+        still empty, so the restored readings survive it and the box's ring
+        buffer fills in whatever the server missed while it was down.
+        """
+        if not path.exists():
+            return 0
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            if payload.get("version") != FILE_VERSION:
+                log.info("ignoring history file %s: unknown format", path)
+                return 0
+            if payload.get("box") != box:
+                log.info("ignoring history file %s: it was saved for %s, not %s",
+                         path, payload.get("box"), box)
+                return 0
+            saved = {
+                int(sid): {int(t): float(v) for t, v in bucket.items() if v is not None}
+                for sid, bucket in payload["sensors"].items()
+            }
+        except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+            # A damaged file should not stop the app from starting.
+            log.warning("ignoring unreadable history file %s: %s", path, exc)
+            return 0
+
+        cutoff = int(time.time()) - self.window_s
+        restored = 0
+        for sid, bucket in saved.items():
+            if sid not in self._data:
+                continue
+            for t, value in bucket.items():
+                if t >= cutoff:
+                    self._data[sid][t] = value
+                    restored += 1
+        return restored
 
     def _prune(self, now: int) -> None:
         cutoff = now - self.window_s

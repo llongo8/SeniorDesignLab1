@@ -33,6 +33,28 @@ history = HistoryStore(SENSOR_IDS)
 alerts = AlertEngine()
 poller = BoxPoller(history, alerts)
 
+# How often the graph history is written to disk. A kill loses at most this
+# much, and usually nothing: if the box stayed up, its ring buffer fills the
+# missing seconds back in on the next start.
+HISTORY_SAVE_PERIOD_S = 5.0
+
+
+def _box_id() -> str:
+    return f"{settings.box_host}:{settings.box_port}"
+
+
+def _save_history() -> None:
+    try:
+        history.save(settings.history_file, _box_id())
+    except OSError as exc:
+        log.warning("could not save history to %s: %s", settings.history_file, exc)
+
+
+async def _save_history_periodically() -> None:
+    while True:
+        await asyncio.sleep(HISTORY_SAVE_PERIOD_S)
+        _save_history()
+
 
 def _quiet_connection_reset(loop: asyncio.AbstractEventLoop, context: dict) -> None:
     """Swallow the traceback Windows prints when a browser tab goes away.
@@ -51,16 +73,27 @@ def _quiet_connection_reset(loop: asyncio.AbstractEventLoop, context: dict) -> N
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     asyncio.get_running_loop().set_exception_handler(_quiet_connection_reset)
-    task = asyncio.create_task(poller.run(), name="box-poller")
+    restored = history.load(settings.history_file, _box_id())
+    if restored:
+        log.info("restored %d readings from %s", restored, settings.history_file)
+    tasks = [
+        asyncio.create_task(poller.run(), name="box-poller"),
+        asyncio.create_task(_save_history_periodically(), name="history-saver"),
+    ]
     try:
         yield
     finally:
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
+        for task in tasks:
+            task.cancel()
+        for task in tasks:
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
         await poller.aclose()
+        # A clean stop (Ctrl+C) saves right up to the last second. A kill never
+        # reaches this line, which is why the periodic save exists at all.
+        _save_history()
 
 
 app = FastAPI(title="ECE:4880 Lab 1 Thermometer", lifespan=lifespan)
