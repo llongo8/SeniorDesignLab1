@@ -222,6 +222,34 @@ function drawChart() {
 
   if (!latestSeries) return;
 
+  // --- missing data, shaded once for the whole chart ---
+  // Shaded only where NO sensor has a reading, so the grey means exactly "there
+  // is nothing here". Shading each sensor's own gap separately put grey across
+  // the whole plot height, and the other sensor's trace -- which did have
+  // readings -- was then drawn straight through it. That reads as "this sensor
+  // is missing but its line carries on", which is the opposite of what Req
+  // 5c.iv is asking the chart to say. A single probe dropping out still cuts
+  // its own trace; only a gap with no data at all is shaded.
+  const allValues = latestSeries.sensors.map((s) => s.values_c);
+  const nAll = allValues.length ? allValues[0].length : 0;
+  if (nAll) {
+    const xAtAll = (i) => xOf(nAll - 1 - i);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(left, top, plotW, plotH);
+    ctx.clip();
+    let gapStart = null;
+    for (let i = 0; i <= nAll; i++) {
+      const blank = i < nAll && allValues.every((values) => values[i] === null);
+      if (blank && gapStart === null) gapStart = i;
+      if (!blank && gapStart !== null) {
+        drawGapBand(xAtAll(gapStart), xAtAll(i - 1), top, plotH);
+        gapStart = null;
+      }
+    }
+    ctx.restore();
+  }
+
   // --- per sensor ---
   latestSeries.sensors.forEach((sensor, index) => {
     const values = sensor.values_c;
@@ -229,24 +257,6 @@ function drawChart() {
     if (!n) return;
     const color = index === 0 ? COLORS.s1 : COLORS.s2;
     const xAt = (i) => xOf(n - 1 - i);
-
-    // Missing data first, underneath the traces. Req 5c.iv wants a gap to be
-    // unmistakably different from a value pinned to the top or bottom of the
-    // scale, so a gap gets its own hatched band rather than just a break.
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(left, top, plotW, plotH);
-    ctx.clip();
-    let runStart = null;
-    for (let i = 0; i <= n; i++) {
-      const missing = i < n && values[i] === null;
-      if (missing && runStart === null) runStart = i;
-      if (!missing && runStart !== null) {
-        drawGapBand(xAt(runStart), xAt(i - 1), top, plotH, index);
-        runStart = null;
-      }
-    }
-    ctx.restore();
 
     // Trace, broken wherever data is missing.
     ctx.save();
@@ -299,14 +309,15 @@ function drawChart() {
   ctx.strokeRect(left, top, plotW, plotH);
 }
 
-function drawGapBand(x0, x1, top, plotH, sensorIndex) {
+function drawGapBand(x0, x1, top, plotH) {
   // A one-sample gap still needs to be visible, hence the minimum width.
   const xa = Math.min(x0, x1);
   const xb = Math.max(x0, x1);
   const width = Math.max(2, xb - xa);
-  // Offset the two sensors vertically so overlapping gaps stay distinguishable.
-  const bandTop = top + (sensorIndex === 0 ? 0 : plotH / 2);
-  const bandH = plotH / 2;
+  // Full height: the band is only drawn where no sensor has data, so there is
+  // no trace it could be drawn underneath.
+  const bandTop = top;
+  const bandH = plotH;
 
   ctx.fillStyle = 'rgba(74, 85, 96, 0.28)';
   ctx.fillRect(xa, bandTop, width, bandH);
