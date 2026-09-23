@@ -114,6 +114,15 @@ def main() -> int:
 
         while True:
             for label, seconds in CYCLE:
+                # If the simulator or the app is gone, stop rather than carry on
+                # driving nothing. A loop left running after its own servers were
+                # killed will fight the next run for the simulator, and the
+                # outages come out at the wrong times.
+                if any(child.poll() is not None for child in children):
+                    print("\na server this script started has exited; stopping.",
+                          flush=True)
+                    return 1
+
                 if label == "probe 1 unplugged":
                     sim("/sim/unplug?sensor=1&value=true")
                 elif label == "box switched off":
