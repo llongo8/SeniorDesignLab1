@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Disconnect on the graph — ECE:4880 Lab 1</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --line: #222b35;
+    --ink: #e6edf3;
+    --ink-dim: #8b98a5;
+    --s1: #4aa3ff;
+    --s2: #ffb454;
+    --missing: #4a5560;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 56px; }
+  h1 { font-size: 1.3rem; margin: 0 0 4px; letter-spacing: -.01em; }
+  .sub { color: var(--ink-dim); margin: 0 0 6px; font-size: .92rem; }
+  .note {
+    border-left: 3px solid var(--s2); background: #1d1a12; color: #d8c9a8;
+    padding: 9px 12px; font-size: .84rem; margin: 14px 0 22px;
+  }
+  .card { background: var(--card); border: 1px solid var(--line); padding: 16px 18px; }
+  .card-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+  .card-head h2 { font-size: .98rem; margin: 0; font-weight: 600; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: .78rem; color: var(--ink-dim); }
+  .key { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  .sw.s1 { background: var(--s1); }
+  .sw.s2 { background: var(--s2); }
+  .sw.miss {
+    height: 12px; width: 12px; border-radius: 2px; border: 1px solid var(--missing);
+    background: repeating-linear-gradient(45deg, var(--missing) 0 3px, transparent 3px 6px);
+  }
+  canvas { width: 100%; height: auto; display: block; }
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 20px; }
+  .step { background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--s1); padding: 12px 14px; }
+  .step:nth-child(2) { border-left-color: var(--missing); }
+  .step:nth-child(3) { border-left-color: var(--s1); }
+  .step h3 { margin: 0 0 5px; font-size: .84rem; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-dim); font-weight: 600; }
+  .step p { margin: 0; font-size: .88rem; color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>What a disconnect looks like on the graph</h1>
+  <p class="sub">ECE:4880 Lab 1 &mdash; two-sensor networked thermometer, 300-second chart recorder.</p>
+
+  <div class="note">
+    <strong>Illustration.</strong> These readings are made up to show the behaviour clearly. This is
+    not a measurement and not live data &mdash; it is a fixed picture that never changes.
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Last 300 seconds</h2>
+      <div class="legend">
+        <span class="key"><i class="sw s1"></i>Sensor 1</span>
+        <span class="key"><i class="sw s2"></i>Sensor 2</span>
+        <span class="key"><i class="sw miss"></i>no data</span>
+      </div>
+    </div>
+    <canvas id="chart" width="1200" height="430"></canvas>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <h3>Before</h3>
+      <p>Both probes reporting once a second. Two traces on a fixed 10&ndash;50&nbsp;&deg;C scale.</p>
+    </div>
+    <div class="step">
+      <h3>Disconnected &mdash; 10 s</h3>
+      <p>Nothing is recorded. Both traces stop dead and the graph greys out for exactly the seconds
+         that are missing, so the outage keeps its true width on the time axis.</p>
+    </div>
+    <div class="step">
+      <h3>After</h3>
+      <p>Readings resume on their own. The traces start again on the far side of the gap &mdash; they
+         are never joined across it, which would have invented data that was never measured.</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// --- the fixed data -------------------------------------------------------
+// 300 samples, one per second. Index 0 is 300 s ago, index 299 is "now".
+const N = 300;
+const GAP_START = 30;   // seconds into the window
+const GAP_LEN   = 10;   // the disconnect
+
+const s1 = [], s2 = [];
+for (let i = 0; i < N; i++) {
+  const inGap = i >= GAP_START && i < GAP_START + GAP_LEN;
+  if (inGap) { s1.push(null); s2.push(null); continue; }
+  s1.push(22.0 + 0.85 * Math.sin(i / 37) + 0.25 * Math.sin(i / 11));
+  s2.push(24.3 + 0.60 * Math.sin(i / 29 + 1.2) + 0.20 * Math.sin(i / 7));
+}
+
+// --- drawing --------------------------------------------------------------
+const Y_MIN = 10, Y_MAX = 50, WINDOW_S = 300;
+const COLORS = { s1: '#4aa3ff', s2: '#ffb454', grid: '#2c3742', axis: '#8b98a5', missing: '#4a5560' };
+
+const canvas = document.getElementById('chart');
+const ctx = canvas.getContext('2d');
+
+function draw() {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.parentElement.clientWidth;
+  const h = Math.max(280, Math.round(w * 0.36));
+  canvas.width = Math.round(w * dpr);
+  canvas.height = Math.round(h * dpr);
+  canvas.style.width = w + 'px';          // keep the drawing from being squashed
+  canvas.style.height = h + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const left = 56, right = w - 14, top = 14, bottom = h - 34;
+  const plotW = right - left, plotH = bottom - top;
+
+  ctx.clearRect(0, 0, w, h);
+
+  const yOf = (c) => bottom - ((Math.min(Y_MAX, Math.max(Y_MIN, c)) - Y_MIN) / (Y_MAX - Y_MIN)) * plotH;
+  const xAt = (i) => left + (1 - ((N - 1 - i) / WINDOW_S)) * plotW;
+
+  // grid + axes
+  ctx.font = '11px system-ui, sans-serif';
+  ctx.strokeStyle = COLORS.grid;
+  ctx.fillStyle = COLORS.axis;
+  ctx.lineWidth = 1;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let c = Y_MIN; c <= Y_MAX; c += 5) {
+    const y = yOf(c);
+    ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(right, y); ctx.stroke();
+    ctx.fillText(c + '°C', left - 8, y);
+  }
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  for (let s = WINDOW_S; s >= 0; s -= 60) {
+    const x = left + (1 - s / WINDOW_S) * plotW;
+    ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke();
+    ctx.fillText(String(s), x, bottom + 8);
+  }
+  ctx.fillText('seconds ago', (left + right) / 2, bottom + 21);
+
+  // the grey band, drawn only where no sensor has a reading
+  ctx.save();
+  ctx.beginPath(); ctx.rect(left, top, plotW, plotH); ctx.clip();
+  let runStart = null;
+  for (let i = 0; i <= N; i++) {
+    const blank = i < N && s1[i] === null && s2[i] === null;
+    if (blank && runStart === null) runStart = i;
+    if (!blank && runStart !== null) {
+      const xa = xAt(runStart), xb = xAt(i - 1), width = Math.max(2, xb - xa);
+      ctx.fillStyle = 'rgba(74, 85, 96, 0.28)';
+      ctx.fillRect(xa, top, width, plotH);
+      ctx.save();
+      ctx.beginPath(); ctx.rect(xa, top, width, plotH); ctx.clip();
+      ctx.strokeStyle = COLORS.missing;
+      for (let d = -plotH; d < width; d += 6) {
+        ctx.beginPath();
+        ctx.moveTo(xa + d, top + plotH);
+        ctx.lineTo(xa + d + plotH, top);
+        ctx.stroke();
+      }
+      ctx.restore();
+      runStart = null;
+    }
+  }
+  ctx.restore();
+
+  // traces, broken wherever data is missing
+  [[s1, COLORS.s1, []], [s2, COLORS.s2, [6, 3]]].forEach(([vals, color, dash]) => {
+    ctx.save();
+    ctx.beginPath(); ctx.rect(left, top, plotW, plotH); ctx.clip();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.setLineDash(dash);
+    ctx.beginPath();
+    let drawing = false;
+    for (let i = 0; i < N; i++) {
+      const v = vals[i];
+      if (v === null) { drawing = false; continue; }
+      const x = xAt(i), y = yOf(v);
+      if (!drawing) { ctx.moveTo(x, y); drawing = true; } else { ctx.lineTo(x, y); }
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  });
+}
+
+draw();
+addEventListener('resize', draw);
+</script>
+</body>
+</html>
