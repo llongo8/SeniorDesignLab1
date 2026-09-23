@@ -26,6 +26,16 @@ const COLORS = {
   offscale: '#f85149',
 };
 
+// A gap band is tinted with the colour of the sensor it belongs to. Without
+// that you cannot tell whose gap it is: the bands sit in fixed halves of the
+// plot, so sensor 1's band is drawn straight across sensor 2's trace whenever
+// sensor 2 happens to be reading high, which reads as "sensor 2 is missing but
+// its line continues".
+function withAlpha(hex, alpha) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
 let unit = localStorage.getItem('unit') === 'F' ? 'F' : 'C';
 let latestSeries = null;
 let latestLive = null;
@@ -304,18 +314,21 @@ function drawGapBand(x0, x1, top, plotH, sensorIndex) {
   const xa = Math.min(x0, x1);
   const xb = Math.max(x0, x1);
   const width = Math.max(2, xb - xa);
-  // Offset the two sensors vertically so overlapping gaps stay distinguishable.
+  // Offset the two sensors vertically so overlapping gaps stay distinguishable:
+  // one half means one sensor is missing, and both halves together (a
+  // full-height band) means the whole box is off.
   const bandTop = top + (sensorIndex === 0 ? 0 : plotH / 2);
   const bandH = plotH / 2;
+  const bandColor = sensorIndex === 0 ? COLORS.s1 : COLORS.s2;
 
-  ctx.fillStyle = 'rgba(74, 85, 96, 0.28)';
+  ctx.fillStyle = withAlpha(bandColor, 0.16);
   ctx.fillRect(xa, bandTop, width, bandH);
 
   ctx.save();
   ctx.beginPath();
   ctx.rect(xa, bandTop, width, bandH);
   ctx.clip();
-  ctx.strokeStyle = COLORS.missing;
+  ctx.strokeStyle = withAlpha(bandColor, 0.55);
   ctx.lineWidth = 1;
   for (let d = -bandH; d < width; d += 6) {
     ctx.beginPath();

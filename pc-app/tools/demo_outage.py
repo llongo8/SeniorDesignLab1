@@ -62,12 +62,46 @@ def sim(path: str) -> None:
 def wait_for_app(limit: float = 30.0) -> bool:
     deadline = time.time() + limit
     while time.time() < deadline:
+        if app_alive(tries=1):
+            return True
+        time.sleep(0.5)
+    return False
+
+
+def app_alive(tries: int = 3) -> bool:
+    """Is the web app still answering?
+
+    Liveness is checked over HTTP rather than with Popen.poll(), because on
+    Windows the venv's python.exe is a launcher: it starts the real interpreter
+    as a separate process and exits, so poll() reports an exit while the server
+    is still happily serving. /api/live answers during a simulated outage too --
+    it just reports the box as offline -- so this only goes false when the app
+    itself is gone.
+    """
+    for attempt in range(tries):
         try:
             urllib.request.urlopen(APP_URL + "/api/live", timeout=2).read()
             return True
         except Exception:
-            time.sleep(0.5)
+            if attempt < tries - 1:
+                time.sleep(1)
     return False
+
+
+def kill_listener(port: int) -> None:
+    """Kill whatever is listening on `port`.
+
+    Needed for the same launcher reason: terminating the child we spawned kills
+    the launcher, not the interpreter holding the socket, which would leave a
+    server orphaned on Ctrl+C.
+    """
+    if os.name != "nt":
+        return
+    subprocess.run(
+        ["powershell", "-NoProfile", "-Command",
+         "Get-NetTCPConnection -LocalPort %d -State Listen -ErrorAction SilentlyContinue"
+         " | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }" % port],
+        capture_output=True)
 
 
 def main() -> int:
@@ -114,13 +148,12 @@ def main() -> int:
 
         while True:
             for label, seconds in CYCLE:
-                # If the simulator or the app is gone, stop rather than carry on
-                # driving nothing. A loop left running after its own servers were
-                # killed will fight the next run for the simulator, and the
-                # outages come out at the wrong times.
-                if any(child.poll() is not None for child in children):
-                    print("\na server this script started has exited; stopping.",
-                          flush=True)
+                # If the app is gone, stop rather than carry on driving nothing.
+                # A loop left running after its own servers were killed will
+                # fight the next run for the simulator, and the outages then
+                # come out at the wrong times.
+                if not app_alive():
+                    print("\nthe web app is no longer answering; stopping.", flush=True)
                     return 1
 
                 if label == "probe 1 unplugged":
@@ -149,6 +182,11 @@ def main() -> int:
                 child.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 child.kill()
+        # And the interpreters actually holding the sockets, which are not the
+        # processes we spawned. Without this, Ctrl+C leaves both servers running
+        # and port 8000 stays busy.
+        kill_listener(8000)
+        kill_listener(8080)
         sim_log.close()
         app_log.close()
         print("stopped. the real box and its saved history were never touched.", flush=True)
