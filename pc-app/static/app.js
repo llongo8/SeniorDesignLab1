@@ -26,11 +26,13 @@ const COLORS = {
   offscale: '#f85149',
 };
 
-// A gap band is tinted with the colour of the sensor it belongs to. Without
-// that you cannot tell whose gap it is: the bands sit in fixed halves of the
-// plot, so sensor 1's band is drawn straight across sensor 2's trace whenever
-// sensor 2 happens to be reading high, which reads as "sensor 2 is missing but
-// its line continues".
+// Height of one sensor's no-data lane, drawn under the plot. Missing data used
+// to be shaded across the plot itself, which meant whichever trace happened to
+// read in that part of the scale was drawn straight through another sensor's
+// shading -- it looked exactly like "this sensor is missing but its line
+// carries on". A lane per sensor cannot be crossed by anything.
+const RIBBON_H = 8;
+
 function withAlpha(hex, alpha) {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
@@ -180,7 +182,9 @@ function drawChart() {
   const left = 56;
   const right = w - 12;
   const top = 14;
-  const bottom = h - 30;
+  // Room under the plot for one no-data lane per sensor, then the x labels.
+  const laneBlock = 6 + 2 * RIBBON_H + 3;
+  const bottom = h - 30 - laneBlock;
   const plotW = right - left;
   const plotH = bottom - top;
 
@@ -226,9 +230,9 @@ function drawChart() {
     ctx.moveTo(x, top);
     ctx.lineTo(x, bottom);
     ctx.stroke();
-    ctx.fillText(String(s), x, bottom + 8);
+    ctx.fillText(String(s), x, bottom + laneBlock + 6);
   }
-  ctx.fillText('seconds ago', (left + right) / 2, bottom + 20);
+  ctx.fillText('seconds ago', (left + right) / 2, bottom + laneBlock + 18);
 
   if (!latestSeries) return;
 
@@ -240,23 +244,31 @@ function drawChart() {
     const color = index === 0 ? COLORS.s1 : COLORS.s2;
     const xAt = (i) => xOf(n - 1 - i);
 
-    // Missing data first, underneath the traces. Req 5c.iv wants a gap to be
-    // unmistakably different from a value pinned to the top or bottom of the
-    // scale, so a gap gets its own hatched band rather than just a break.
+    // Missing data goes in this sensor's own lane under the plot. Req 5c.iv
+    // wants a gap to be unmistakably different from a value pinned to the top
+    // or bottom of the scale: the trace breaks, and the lane underneath fills
+    // in at the same x, so the two readings of the chart agree.
+    const laneTop = bottom + 6 + index * (RIBBON_H + 3);
+    ctx.fillStyle = 'rgba(139, 152, 165, 0.10)';
+    ctx.fillRect(left, laneTop, plotW, RIBBON_H);
+
     ctx.save();
-    ctx.beginPath();
-    ctx.rect(left, top, plotW, plotH);
-    ctx.clip();
+    ctx.font = '10px system-ui, sans-serif';
+    ctx.fillStyle = COLORS.axis;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(index === 0 ? 'S1' : 'S2', left - 8, laneTop + RIBBON_H / 2);
+    ctx.restore();
+
     let runStart = null;
     for (let i = 0; i <= n; i++) {
       const missing = i < n && values[i] === null;
       if (missing && runStart === null) runStart = i;
       if (!missing && runStart !== null) {
-        drawGapBand(xAt(runStart), xAt(i - 1), top, plotH, index);
+        drawGapRibbon(xAt(runStart), xAt(i - 1), laneTop, color);
         runStart = null;
       }
     }
-    ctx.restore();
 
     // Trace, broken wherever data is missing.
     ctx.save();
@@ -309,34 +321,14 @@ function drawChart() {
   ctx.strokeRect(left, top, plotW, plotH);
 }
 
-function drawGapBand(x0, x1, top, plotH, sensorIndex) {
+function drawGapRibbon(x0, x1, laneTop, color) {
   // A one-sample gap still needs to be visible, hence the minimum width.
   const xa = Math.min(x0, x1);
   const xb = Math.max(x0, x1);
   const width = Math.max(2, xb - xa);
-  // Offset the two sensors vertically so overlapping gaps stay distinguishable:
-  // one half means one sensor is missing, and both halves together (a
-  // full-height band) means the whole box is off.
-  const bandTop = top + (sensorIndex === 0 ? 0 : plotH / 2);
-  const bandH = plotH / 2;
-  const bandColor = sensorIndex === 0 ? COLORS.s1 : COLORS.s2;
 
-  ctx.fillStyle = withAlpha(bandColor, 0.16);
-  ctx.fillRect(xa, bandTop, width, bandH);
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(xa, bandTop, width, bandH);
-  ctx.clip();
-  ctx.strokeStyle = withAlpha(bandColor, 0.55);
-  ctx.lineWidth = 1;
-  for (let d = -bandH; d < width; d += 6) {
-    ctx.beginPath();
-    ctx.moveTo(xa + d, bandTop + bandH);
-    ctx.lineTo(xa + d + bandH, bandTop);
-    ctx.stroke();
-  }
-  ctx.restore();
+  ctx.fillStyle = withAlpha(color, 0.85);
+  ctx.fillRect(xa, laneTop, width, RIBBON_H);
 }
 
 window.addEventListener('resize', () => drawChart());
